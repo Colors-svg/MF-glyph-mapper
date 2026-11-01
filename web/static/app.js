@@ -1002,6 +1002,19 @@ document.addEventListener("keydown", e => {
 });
 $("f-path").value = "D:\\manim\\ejercicios\\cinetica_orden_cuatro.py";
 stepper();
+/* Requisitos: la app abre igual sin ellos, pero avisa claro en vez de fallar raro. */
+(async () => {
+  try {
+    const h = await (await fetch("/api/health")).json();
+    if (!h.ok) {
+      const faltan = h.checks.filter(c => !c.ok).map(c => c.name).join(", ");
+      toast(`<b>Faltan requisitos:</b> ${faltan}. Sin ellos no hay renders ni previas. Detalle en README (requirements.txt).`, 15000, true);
+      status(`Faltan requisitos: ${faltan}. La app abre igual, pero sin renders.`);
+    } else {
+      status(`Requisitos OK: manim ${h.checks[0].detail} · MF_Tools + LaTeX presentes.`);
+    }
+  } catch (e) { /* sin servidor no hay chequeo */ }
+})();
 
 /* FREE-STATUS (aditivo): asignados vs libres. No edita drawCanvas/redraw por dentro;
    decora el DOM tras cada redraw y expone window.__mf.free() para QA. */

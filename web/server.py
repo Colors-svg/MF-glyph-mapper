@@ -100,6 +100,8 @@ class Handler(BaseHTTPRequestHandler):
                   ".js": "text/javascript; charset=utf-8",
                   ".svg": "image/svg+xml"}.get(fp.suffix, "application/octet-stream")
             return self._send_file(fp, ct)
+        if u.path == "/api/health":
+            return self._send_json(_health())
         if u.path.startswith("/previews/"):
             name = Path(unquote(u.path)).name
             fp = PREVIEWS / name
@@ -188,6 +190,27 @@ class Handler(BaseHTTPRequestHandler):
 
     def log_message(self, *a) -> None:
         pass
+
+
+def _health() -> dict:
+    """Chequeo de requisitos: la app funciona igual sin ellos, pero lo dice claro."""
+    checks: list[dict] = []
+    try:
+        import manim  # noqa: F401
+        checks.append({"name": "manim", "ok": True, "detail": manim.__version__})
+    except Exception as e:  # noqa: BLE001
+        checks.append({"name": "manim", "ok": False, "detail": str(e)[:150]})
+    try:
+        import MF_Tools  # noqa: F401
+        checks.append({"name": "MF_Tools", "ok": True,
+                       "detail": getattr(MF_Tools, "__file__", "")})
+    except Exception as e:  # noqa: BLE001
+        checks.append({"name": "MF_Tools", "ok": False, "detail": str(e)[:150]})
+    import shutil
+    for exe in ("latex", "dvisvgm"):
+        path = shutil.which(exe)
+        checks.append({"name": exe, "ok": bool(path), "detail": path or "no en PATH"})
+    return {"ok": all(c["ok"] for c in checks), "checks": checks}
 
 
 def run(host: str = "127.0.0.1", port: int = 8765) -> None:

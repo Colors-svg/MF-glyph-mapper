@@ -58,6 +58,7 @@ def main() -> int:
             pg.wait_for_timeout(2500)
             checks = {
                 "tour visible": pg.evaluate("!document.getElementById('tour-scrim').hidden"),
+                "health ok": pg.evaluate("fetch('/api/health').then(r=>r.json()).then(h=>h.ok)"),
                 "boton demo": pg.evaluate("!!document.getElementById('b-demo')"),
                 "boton sugerencias": pg.evaluate("!!document.getElementById('b-sugg')"),
                 "21 botones mapa": pg.evaluate(
