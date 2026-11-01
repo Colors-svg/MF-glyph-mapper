@@ -773,7 +773,21 @@ async function preloadRest() {
         api("/api/render", {latex: t.latex_a, path: [0]}, 300000),
         api("/api/render", {latex: t.latex_b, path: [0]}, 300000)]);
       if (seq !== S._preSeq) return;
-      if (a.ok && b.ok) S.pre[i] = {gA: a, gB: b};
+      if (a.ok && b.ok) {
+        S.pre[i] = {gA: a, gB: b};
+        // El fondo ya tiene conteos reales: verifica cobertura sin esperar al clic.
+        const t2 = S.transitions[i];
+        if (t2) {
+          const tid2 = `${t2.from_var}->${t2.to_var}`;
+          const saved = S.maps[tid2];
+          if (saved && saved.length) {
+            const cov = pairCoverage(saved.map(([f, tt]) => ({f, t: tt})), a.resolved_len, b.resolved_len);
+            if (cov.ok) S.done[tid2] = true; else delete S.done[tid2];
+            try { persistMaps(); } catch (e) {}
+            refreshMarks();
+          }
+        }
+      }
     } catch (e) { /* reintentable al abrir el par */ }
     done++;
     await new Promise(r => setTimeout(r, 400)); // respiro al servidor
