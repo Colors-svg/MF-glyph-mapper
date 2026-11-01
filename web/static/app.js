@@ -552,19 +552,24 @@ $("f-go").onclick = async () => {
     btn.disabled = false; return;
   }
   S.file = path; S.formulas = r.formulas; S.transitions = r.transitions; S.warnings = r.warnings; S.maps = {}; S.done = {}; S.pre = {}; S._preSeq = (S._preSeq || 0) + 1;
-  // Importar empieza LIMPIO. Si hay trabajo anterior, se ofrece recuperarlo (no en silencio).
+  // Precarga del .py (TransformByGlyphMap + GLYPH_MAP_* literales). Manda el trabajo guardado si lo hay.
+  const pre = r.prefill || {};
+  Object.entries(pre).forEach(([tid, gm]) => { S.maps[tid] = gm.map(([f, t]) => [[...f], [...t]]); });
+  const nPre = Object.keys(pre).length;
+  // Importar empieza LIMPIO salvo precarga. Si hay trabajo anterior, se ofrece recuperarlo (no en silencio).
   let hadPrev = false, nPrev = 0;
   try {
     const raw = localStorage.getItem("mf-maps::" + path);
-    if (raw) { const o = JSON.parse(raw); nPrev = Object.keys(o || {}).length; hadPrev = nPrev > 0; }
+    if (raw) { const o = JSON.parse(raw); const m = (o && o.v === 1 && o.maps) ? o.maps : o; nPrev = Object.keys(m || {}).length; hadPrev = nPrev > 0; }
   } catch (e) {}
   if (hadPrev) {
-    if (confirm(`Hay ${nPrev} mapa(s) guardados de una sesión anterior. ¿Recuperarlos?\nAceptar = recuperar · Cancelar = empezar limpio.`)) restoreMaps();
+    if (confirm(`Hay ${nPrev} mapa(s) guardados de una sesión anterior${nPre ? ` + ${nPre} precargado(s) del .py` : ""}. ¿Recuperar lo guardado (manda sobre el .py)?\nAceptar = recuperar · Cancelar = usar ${nPre ? "la precarga del .py" : "mapas limpios"}.`)) restoreMaps();
     else { try { localStorage.removeItem("mf-maps::" + path); } catch (e) {} }
   }
   S.pairIdx = -1; S.gA = S.gB = null; S.view = null;
   $("report").className = "report " + (r.warnings.length ? "warn" : "ok");
   $("report").innerHTML = `<b>${r.formulas.length}</b> fórmulas · <b>${r.transitions.length}</b> transiciones · <b>${r.warnings.length}</b> avisos` +
+    (nPre ? ` · <b>${nPre}</b> mapa(s) precargado(s) del .py` : "") +
     (r.warnings.length ? "<ul>" + r.warnings.map(w => `<li>${w}</li>`).join("") : "<p>0 avisos: extracción limpia.</p>");
   $("t-count").textContent = `${r.transitions.length} pares`;
   buildPairSel(""); renderTList("");
@@ -856,8 +861,9 @@ function restoreMaps() {
     if (!raw) return;
     const o = JSON.parse(raw);
     if (o && typeof o === "object") {
-      if (o.v === 1 && o.maps) { S.maps = o.maps; S.done = o.done || {}; }
-      else { S.maps = o; S.done = {}; } // legado: sin ✓ hasta revisitar cada par
+      // Lo guardado manda sobre la precarga del .py (trabajo más nuevo).
+      if (o.v === 1 && o.maps) { S.maps = {...S.maps, ...o.maps}; S.done = {...S.done, ...(o.done || {})}; }
+      else { S.maps = {...S.maps, ...o}; } // legado: sin ✓ hasta revisitar cada par
     }
   } catch (e) {}
 }

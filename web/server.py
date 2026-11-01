@@ -140,7 +140,7 @@ class Handler(BaseHTTPRequestHandler):
                                       "latex_b": (by_var[t.to_var].args[0]
                                                   if t.to_var in by_var and by_var[t.to_var].args else "")}
                                      for t in sq.transitions],
-                    "warnings": sq.warnings})
+                    "warnings": sq.warnings, "prefill": sq.prefill})
             elif self.path == "/api/demo":
                 self._send_json({"ok": True, "path": str(DEMO),
                                  "exists": DEMO.is_file()})
