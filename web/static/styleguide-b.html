@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="es" data-variant="b">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Styleguide B · Instrumento</title>
+<style>
+:root{--s1:4px;--s2:8px;--s3:12px;--s4:16px;--s5:20px;--s6:24px;--s8:32px;--r-sm:6px;--r-md:10px;--r-lg:14px;--r-pill:999px;
+--font-ui:"Inter","Segoe UI",system-ui,sans-serif;--font-mono:"Cascadia Mono",Consolas,monospace;
+--dur-1:120ms;--dur-2:200ms;--ease:cubic-bezier(.2,0,0,1);
+--bg0:#161b22;--bg1:#1d232e;--bg2:#242c39;--line:rgba(180,200,220,.12);--ink:#e8edf3;--ink-dim:#98a4b5;
+--accent:#2dd4bf;--accent-ink:#06231f;--glyph-fill:rgba(232,237,243,.92);
+--c0:#e69f00;--c1:#56b4e9;--c2:#009e73;--c3:#f0e442;--c4:#0072b2;--c5:#d55e00;--c6:#cc79a7;--c7:#999999;--c8:#117733;--c9:#88ccee;
+--err:#ff6b6b;--warn:#f0a832;--ok:#3fb97f}
+html[data-theme=light]{--bg0:#f4f5f7;--bg1:#fff;--bg2:#eceff3;--line:rgba(20,30,50,.14);--ink:#17202e;--ink-dim:#5b6a7f;--accent:#0e7c6f;--accent-ink:#fff;--glyph-fill:rgba(23,32,46,.92)}
+*{box-sizing:border-box}body{margin:0;background:var(--bg0);color:var(--ink);font-family:var(--font-ui);font-size:13px}
+.wrap{max-width:1100px;margin:0 auto;padding:var(--s6) var(--s6)}
+h1{font-size:20px;margin:0 0 var(--s1)}p.sub{color:var(--ink-dim);margin:0 0 var(--s5);font-size:12px;text-transform:uppercase;letter-spacing:.1em}
+.sec{background:var(--bg1);border:1px solid var(--line);border-radius:var(--r-sm);padding:var(--s4);margin-bottom:var(--s4)}
+.sec h2{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--ink-dim);margin:0 0 var(--s3);border-bottom:1px solid var(--line);padding-bottom:var(--s2)}
+.row{display:flex;gap:var(--s2);flex-wrap:wrap;align-items:center}
+.btn{background:var(--bg2);border:1px solid var(--line);color:var(--ink);border-radius:var(--r-sm);padding:7px 12px;cursor:pointer;font-size:12px;text-transform:uppercase;letter-spacing:.06em;transition:all var(--dur-1) var(--ease)}
+.btn:hover{border-color:var(--accent);color:var(--accent)}.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:700}
+.btn.danger{color:var(--err)}.btn:disabled{opacity:.45}
+.tabs{display:flex;gap:0;border:1px solid var(--line);border-radius:var(--r-sm);overflow:hidden;width:max-content}
+.tab{padding:8px 14px;font-size:12px;color:var(--ink-dim);border-right:1px solid var(--line)}
+.tab:last-child{border-right:0}.tab.on{background:var(--accent);color:var(--accent-ink);font-weight:700}.tab.done{color:var(--ok)}
+.panel{background:var(--bg1);border:1px solid var(--line);border-radius:var(--r-sm);padding:var(--s3)}
+.badge{font-family:var(--font-mono);font-size:10px;font-weight:700;background:#0b1116;color:#fff;border:1px solid var(--accent);border-radius:3px;padding:1px 6px}
+svg.g{width:110px;height:110px;background:#10141b;border:1px solid var(--line);border-radius:var(--r-sm)}
+html[data-theme=light] svg.g{background:#fff}
+svg.g path{fill:var(--glyph-fill);stroke:var(--ink-dim);stroke-width:1.2;transition:all var(--dur-2) var(--ease)}
+svg.g.hover path{fill:none;stroke:var(--accent);stroke-width:2}
+svg.g.sel path{fill:var(--c5);stroke:var(--c5)}
+.card-conn{border:1px solid var(--line);border-radius:var(--r-sm);background:var(--bg2);min-width:210px;font-size:12px}
+.card-conn .hd{display:flex;justify-content:space-between;padding:var(--s2) var(--s3);border-bottom:1px solid var(--line);font-family:var(--font-mono)}
+.card-conn .bd{padding:var(--s2) var(--s3);color:var(--ink-dim)}
+.code{background:#10141b;border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:0 var(--r-sm) var(--r-sm) 0;padding:var(--s3);font-family:var(--font-mono);font-size:12px;white-space:pre}
+html[data-theme=light] .code{background:#fff}
+.code .k{color:var(--accent)}.code .n{color:var(--c1)}
+.note{border-radius:var(--r-sm);padding:var(--s2) var(--s3);border:1px solid;margin-bottom:var(--s2);font-size:12px}
+.note.err{border-color:var(--err)}.note.warn{border-color:var(--warn)}.note .lv{font-weight:700;font-size:10px;margin-right:8px}
+.toast{background:var(--bg2);border:1px solid var(--ok);border-radius:var(--r-sm);padding:var(--s2) var(--s3);font-size:12px;display:inline-block}
+.top{position:sticky;top:0;display:flex;gap:var(--s3);align-items:center;justify-content:space-between;padding:var(--s2) var(--s6);background:var(--bg1);border-bottom:1px solid var(--line);font-size:12px;text-transform:uppercase;letter-spacing:.1em}
+.connline{stroke-width:2;fill:none}
+</style></head>
+<body>
+<div class="top"><b>B · Instrumento</b><button class="btn" onclick="document.documentElement.dataset.theme=document.documentElement.dataset.theme==='light'?'':'light'">claro / oscuro</button></div>
+<div class="wrap">
+<h1>Styleguide B — Instrumento</h1>
+<p class="sub">Frío y técnico · acento verde azulado · radio 6 · densidad alta</p>
+<div class="sec"><h2>Botones</h2><div class="row">
+<button class="btn primary">Guardar mapa del par ✓</button><button class="btn">Conectar N→M</button>
+<button class="btn">Deshacer</button><button class="btn danger">Limpiar</button><button class="btn" disabled>Bloqueado</button></div></div>
+<div class="sec"><h2>Pestañas</h2><div class="tabs"><span class="tab done">1 · CARGAR ✓</span><span class="tab on">2 · MAPEAR</span><span class="tab">3 · VERIFICAR</span><span class="tab">4 · EXPORTAR</span><span class="tab">5 · PREVIA</span></div></div>
+<div class="sec"><h2>Panel + insignia</h2><div class="panel"><span class="badge">07</span> índice real tal cual lo da la API</div></div>
+<div class="sec"><h2>Glifo: reposo / hover / seleccionado + conexión</h2><div class="row">
+<svg class="g" viewBox="0 0 60 60"><path d="M15,45 C15,25 25,25 25,15 C25,25 35,25 35,45 C35,35 25,35 15,45 Z"/></svg>
+<svg class="g hover" viewBox="0 0 60 60"><path d="M15,45 C15,25 25,25 25,15 C25,25 35,25 35,45 C35,35 25,35 15,45 Z"/></svg>
+<svg class="g sel" viewBox="0 0 60 60"><path d="M15,45 C15,25 25,25 25,15 C25,25 35,25 35,45 C35,35 25,35 15,45 Z"/></svg>
+<svg width="260" height="120" viewBox="0 0 260 120"><path class="connline" stroke="#56b4e9" d="M10,60 C80,60 60,20 130,20"/><path class="connline" stroke="#cc79a7" d="M10,90 C90,90 70,100 130,100"/><rect x="4" y="54" width="12" height="12" fill="#56b4e9"/><rect x="4" y="84" width="12" height="12" fill="#cc79a7"/></svg>
+</div></div>
+<div class="sec"><h2>Tarjeta de conexión</h2><div class="row">
+<div class="card-conn"><div class="hd"><span>[0,1] → [0]</span><span style="color:#009e73">● transform</span></div><div class="bd">origen reutilizado · clic para localizar · ✕ elimina</div></div>
+<div class="card-conn"><div class="hd"><span>[3] → []</span><span style="color:#999999">● fade-out</span></div><div class="bd">sin correspondencia explícita</div></div></div></div>
+<div class="sec"><h2>Código</h2><div class="code"><span class="k">self.play</span>(TransformByGlyphMap(mobA, mobB, *glyph_map))
+<span class="n">glyph_map</span> = [([0], [0]), ([1], [2])]</div></div>
+<div class="sec"><h2>Avisos + toast</h2>
+<div class="note err"><span class="lv">ERROR</span><b>COUNT_MISMATCH</b>: restantes 4 vs 5 — entraría en show_indices.</div>
+<div class="note warn"><span class="lv">AVISO</span><b>DEST_REUSED</b>: destino 2 en 2 conexiones.</div>
+<span class="toast">✓ Bundle verificado: 17 transiciones</span></div>
+</div></body></html>

@@ -1,0 +1,12 @@
+# MF Glyph Mapper — ignorados locales (no se publican)
+__pycache__/
+*.pyc
+*.pyo
+previews/
+media/
+.tmp_*/
+.tmp_*.py
+.tmp_canvas_fixture.py
+playwright-report/
+test-results/
+*.log

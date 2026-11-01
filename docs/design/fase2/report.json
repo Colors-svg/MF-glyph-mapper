@@ -1,0 +1,38 @@
+{
+ "1024": {
+  "console_errors": [],
+  "overflow": {
+   "sw": 1024,
+   "cw": 1024,
+   "sh": 900,
+   "ih": 900
+  }
+ },
+ "1440": {
+  "console_errors": [],
+  "overflow": {
+   "sw": 1440,
+   "cw": 1440,
+   "sh": 900,
+   "ih": 900
+  }
+ },
+ "1920": {
+  "console_errors": [],
+  "overflow": {
+   "sw": 1920,
+   "cw": 1920,
+   "sh": 900,
+   "ih": 900
+  }
+ },
+ "2560": {
+  "console_errors": [],
+  "overflow": {
+   "sw": 2560,
+   "cw": 2560,
+   "sh": 900,
+   "ih": 900
+  }
+ }
+}

@@ -1,0 +1,5 @@
+# Dependencias mínimas (probado con estas versiones exactas)
+manim==0.20.0
+MF-Tools>=1.1.3
+# Solo para desarrollo / QA web:
+# playwright>=1.40  (pip install playwright && playwright install chromium)

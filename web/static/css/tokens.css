@@ -1,0 +1,61 @@
+:root {
+  /* Espacio: escala 4px */
+  --s0: 0; --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 20px; --s6: 24px; --s8: 32px;
+  /* Radio */
+  --r-sm: 6px; --r-md: 10px; --r-lg: 14px; --r-pill: 999px;
+  /* Tipografia (offline: stacks del sistema; Inter empaquetada en desktop) */
+  --font-ui: "Inter", "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "Cascadia Mono", Consolas, "Roboto Mono", ui-monospace, monospace;
+  /* Motion */
+  --dur-1: 120ms; --dur-2: 200ms;
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+  /* Paleta categorica conexiones (Okabe-Ito, distinguible con daltonismo) */
+  --c0: #e69f00; --c1: #56b4e9; --c2: #009e73; --c3: #f0e442;
+  --c4: #0072b2; --c5: #d55e00; --c6: #cc79a7; --c7: #999999;
+  --c8: #117733; --c9: #88ccee;
+}
+
+/* Variante A — Pizarra */
+[data-variant="a"] {
+  --bg0: #0c1017; --bg1: #141a24; --bg2: #1b2330;
+  --line: rgba(148, 178, 255, 0.14);
+  --ink: #f5f1e6; --ink-dim: #a8b0bf;
+  --accent: #5aa0ff; --accent-ink: #06121f;
+  --glyph-fill: rgba(245, 241, 230, 0.92);
+  --radius: var(--r-md);
+  /* superficies + semánticos (dark) */
+  --surface: #10141b; --surface-2: #0a0d13; --input-bg: #10141b;
+  --badge-bg: #0b1116; --row-hover: #1a2230; --row-cur: #1d3a5f; --row-line: #1c2330;
+  --ok: #4ade80; --warn: #f0a832; --sel: #ff7b00; --err: #ff6b6b;
+  --canvas: #0a0d13;
+}
+
+/* Variante B — Instrumento */
+[data-variant="b"] {
+  --bg0: #161b22; --bg1: #1d232e; --bg2: #242c39;
+  --line: rgba(180, 200, 220, 0.12);
+  --ink: #e8edf3; --ink-dim: #98a4b5;
+  --accent: #2dd4bf; --accent-ink: #06231f;
+  --glyph-fill: rgba(232, 237, 243, 0.92);
+  --radius: var(--r-sm);
+  /* superficies + semánticos (dark) */
+  --surface: #10141b; --surface-2: #0a0d13; --input-bg: #10141b;
+  --badge-bg: #0b1116; --row-hover: #1a2230; --row-cur: #1d3a5f; --row-line: #1c2330;
+  --ok: #34d399; --warn: #f0a832; --sel: #ff7b00; --err: #ff6b6b;
+  --canvas: #0a0d13;
+}
+
+/* Claro opcional (ambas variantes) */
+[data-theme="light"] {
+  --bg0: #f4f5f7; --bg1: #ffffff; --bg2: #eceff3;
+  --line: rgba(20, 30, 50, 0.14);
+  --ink: #17202e; --ink-dim: #5b6a7f;
+  --glyph-fill: rgba(23, 32, 46, 0.92);
+  /* superficies claras; el lienzo SVG se adapta al tema (ver D26) */
+  --surface: #ffffff; --surface-2: #eef1f6; --input-bg: #ffffff;
+  --badge-bg: #ffffff; --row-hover: #e8eef5; --row-cur: #d4e6f7; --row-line: #dfe6ef;
+  --ok: #15803d; --warn: #b45309; --sel: #c2410c; --err: #b91c1c;
+  --canvas: #f8fafc;
+}
+[data-theme="light"][data-variant="a"] { --accent: #1f6feb; --accent-ink: #ffffff; }
+[data-theme="light"][data-variant="b"] { --accent: #0e7c6f; --accent-ink: #ffffff; }
