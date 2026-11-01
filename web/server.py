@@ -32,6 +32,20 @@ DEMO = ROOT / "demo" / "escena_demo.py"
 CACHE.mkdir(parents=True, exist_ok=True)
 
 
+def _code_rev() -> str:
+    try:
+        import subprocess
+        r = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=ROOT,
+                           capture_output=True, text=True, timeout=10)
+        return r.stdout.strip() or "nogit"
+    except Exception:  # noqa: BLE001
+        return "nogit"
+
+
+_CODE_REV = _code_rev()
+_STARTED = __import__("time").strftime("%H:%M:%S")
+
+
 def _run_worker(script: str, payload: dict, timeout: int) -> dict:
     key = None
     if script == "glyph_worker.py":
@@ -210,7 +224,8 @@ def _health() -> dict:
     for exe in ("latex", "dvisvgm"):
         path = shutil.which(exe)
         checks.append({"name": exe, "ok": bool(path), "detail": path or "no en PATH"})
-    return {"ok": all(c["ok"] for c in checks), "checks": checks}
+    return {"ok": all(c["ok"] for c in checks), "checks": checks,
+            "rev": _CODE_REV, "started": _STARTED}
 
 
 def run(host: str = "127.0.0.1", port: int = 8765) -> None:

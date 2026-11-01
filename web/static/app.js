@@ -1019,6 +1019,7 @@ stepper();
     } else {
       status(`Requisitos OK: manim ${h.checks[0].detail} · MF_Tools + LaTeX presentes.`);
     }
+    try { $("tb-file").title = `servidor rev ${h.rev || "?"} · arrancado ${h.started || "?"}`; } catch (e) {}
   } catch (e) { /* sin servidor no hay chequeo */ }
 })();
 
