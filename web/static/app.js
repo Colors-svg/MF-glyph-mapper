@@ -13,7 +13,27 @@ const S = { file: null, formulas: [], transitions: [], warnings: [],
   tid: null, pairIdx: -1, latexA: "", latexB: "", gA: null, gB: null,
   selA: new Set(), selB: new Set(), conns: [], undo: [], redo: [],
   maps: {}, done: {}, sugg: [], view: null, issues: [], quick: true, hideConn: false,
-  pre: {}, _preSeq: 0 };
+  pre: {}, _preSeq: 0, lang: "es" };
+function t(k) {
+  const D = window.I18N || {}, L = D[S.lang] || D.es || {};
+  if (L[k] !== undefined) return L[k];
+  return (D.es && D.es[k] !== undefined) ? D.es[k] : k;
+}
+function applyLang() {
+  try { document.documentElement.lang = S.lang; } catch (e) {}
+  document.querySelectorAll("[data-i18n]").forEach(e => { e.textContent = t(e.dataset.i18n); });
+  document.querySelectorAll("[data-i18n-title]").forEach(e => { e.title = t(e.dataset.i18nTitle); });
+  document.querySelectorAll("[data-i18n-ph]").forEach(e => { e.placeholder = t(e.dataset.i18nPh); });
+  document.querySelectorAll("[data-i18n-alt]").forEach(e => { e.alt = t(e.dataset.i18nAlt); });
+  document.querySelectorAll("[data-i18n-aria]").forEach(e => { e.setAttribute("aria-label", t(e.dataset.i18nAria)); });
+  document.querySelectorAll("[data-i18n-label]").forEach(e => { e.setAttribute("data-label", t(e.dataset.i18nLabel)); });
+  const lb = $("tb-lang");
+  if (lb) { lb.textContent = S.lang === "es" ? "EN" : "ES"; lb.title = S.lang === "es" ? "Switch to English" : "Cambiar a español"; }
+  if ($("b-quick")) $("b-quick").textContent = S.quick ? t("quick_on") : t("quick_off");
+  if ($("b-curves")) $("b-curves").textContent = S.hideConn ? t("curves_off") : t("curves_on");
+  updateSuggBtn(); stepper(); refreshMarks(); redraw();
+}
+try { S.lang = localStorage.getItem("mf-lang") || "es"; } catch (e) { S.lang = "es"; }
 const PAL = ["#e69f00","#56b4e9","#009e73","#f0e442","#0072b2","#d55e00","#cc79a7","#999999","#117733","#88ccee"];
 const connColor = i => PAL[i % PAL.length];
 
@@ -31,32 +51,42 @@ document.querySelectorAll(".stepper button").forEach(b => b.onclick = () => {
 });
 function go(tab) { document.querySelector(`[data-tab="${tab}"]`).click(); }
 $("tb-help").onclick = () => {
-  toast("<b>Atajos</b> · clic A→clic B conecta · Ctrl suma individual · Shift rango · arrastre = rectángulo por zona · Espacio+arrastrar mueve · rueda zoom · doble clic encuadra · gris punteado = sugerencia (clic acepta) · Supr elimina · Ctrl+Z/Y · Esc limpia · <a href='#' onclick='startTour();return false'>ver tour</a>", 9000);
+  const eye = S.lang === "es"
+    ? "<b>Atajos</b> · clic A→clic B conecta · Ctrl suma individual · Shift rango · arrastre = rectángulo por zona · Espacio+arrastrar mueve · rueda zoom · doble clic encuadra · gris punteado = sugerencia (clic acepta) · Supr elimina · Ctrl+Z/Y · Esc limpia"
+    : "<b>Shortcuts</b> · click A→click B connects · Ctrl adds individually · Shift range · drag = marquee · Space+drag moves · wheel zooms · double-click fits · dotted grey = suggestion (click accepts) · Del deletes · Ctrl+Z/Y · Esc clears";
+  toast(`${eye} · <a href='#' onclick='startTour();return false'>${S.lang === "es" ? "ver tour" : "take the tour"}</a>`, 9000);
 };
 /* tour 4 pasos (primera visita; localStorage mf-tour) */
-const TOUR = [
+function tourSteps() {
+  return S.lang === "es" ? [
   {tab: "t-load", t: "1 · Carga tu escena", b: "Pega la ruta del .py (lee el código, no lo ejecuta) y pulsa Cargar. ¿Sin archivo a mano? «Probar demo» trae una escena de 3 pares incluida."},
   {tab: "t-map", t: "2 · Mapea glifos con índices reales", b: "Clic en A y luego clic en B conecta solo. Ctrl/Shift suma individual, arrastre captura por zona. Las sugerencias grises (forma única) se aceptan con un clic."},
   {tab: "t-check", t: "3 · Verifica sin show_indices", b: "El validador replica las reglas de MF_Tools: clic en un problema localiza los glifos. ✓ solo con cobertura total."},
   {tab: "t-export", t: "4 · Exporta y previsualiza", b: "Genera el snippet, el bundle para tu agente Manim y la vista previa real (mp4). El informe te dice exactamente qué mapa se renderizó."},
-];
+  ] : [
+  {tab: "t-load", t: "1 · Load your scene", b: "Paste the .py path (reads the code, never runs it) and press Load. No file at hand? “Try demo” bundles a 3-pair scene."},
+  {tab: "t-map", t: "2 · Map glyphs with real indices", b: "Click A then click B auto-connects. Ctrl/Shift adds individually, drag marquees. Grey suggestions (unique shape) accept with one click."},
+  {tab: "t-check", t: "3 · Verify without show_indices", b: "The validator mirrors the MF_Tools rules: clicking an issue locates the glyphs. ✓ only on full coverage."},
+  {tab: "t-export", t: "4 · Export and preview", b: "Generate the snippet, the bundle for your Manim agent and the real preview (mp4). The report tells you exactly which map was rendered."},
+  ];
+}
 let _tourI = 0;
 function startTour() {
   _tourI = 0; showTour();
   try { localStorage.setItem("mf-tour", "1"); } catch (e) {}
 }
 function showTour() {
-  const s = TOUR[_tourI];
+  const steps = tourSteps(), s = steps[_tourI];
   go(s.tab);
   $("tour-title").textContent = s.t;
   $("tour-body").textContent = s.b;
-  $("tour-step").textContent = `Paso ${_tourI + 1}/${TOUR.length}`;
+  $("tour-step").textContent = `${t("tour_step")} ${_tourI + 1}/${steps.length}`;
   $("tour-back").disabled = _tourI === 0;
-  $("tour-next").textContent = _tourI === TOUR.length - 1 ? "Terminar" : "Siguiente";
+  $("tour-next").textContent = _tourI === steps.length - 1 ? t("tour_done") : t("tour_next");
   $("tour-scrim").hidden = false;
 }
 function endTour() { $("tour-scrim").hidden = true; }
-$("tour-next").onclick = () => { if (_tourI < TOUR.length - 1) { _tourI++; showTour(); } else endTour(); };
+$("tour-next").onclick = () => { if (_tourI < tourSteps().length - 1) { _tourI++; showTour(); } else endTour(); };
 $("tour-back").onclick = () => { if (_tourI > 0) { _tourI--; showTour(); } };
 $("tour-skip").onclick = endTour;
 $("tour-scrim").onclick = e => { if (e.target.id === "tour-scrim") endTour(); };
@@ -64,8 +94,8 @@ try { if (!localStorage.getItem("mf-tour")) setTimeout(startTour, 600); } catch 
 $("b-demo").onclick = async () => {
   let r;
   try { r = await api("/api/demo", {}, 15000); }
-  catch (e) { toast("Servidor no responde.", 3500, true); return; }
-  if (!r.exists) { toast("Demo no encontrada en el servidor.", 3500, true); return; }
+  catch (e) { toast(t("server_down"), 3500, true); return; }
+  if (!r.exists) { toast(t("demo_missing"), 3500, true); return; }
   $("f-path").value = r.path;
   $("f-go").click();
 };
@@ -87,13 +117,13 @@ function stepper() {
   if (!S.gA) { v.textContent = "—"; v.className = "vpill"; }
   else if (errs) { v.textContent = `✕ ${errs} err`; v.className = "vpill err"; }
   else { const w = S.issues.filter(i => i.level === "warning").length;
-    v.textContent = w ? `⚠ ${w} avis` : "✓ válido"; v.className = "vpill " + (w ? "warn" : "ok"); }
-  $("tb-file").textContent = S.file ? S.file.split(/[\\/]/).pop() : "sin archivo";
-  $("tb-pair").textContent = S.pairIdx >= 0 ? S.transitions[S.pairIdx].from_var + "→" + S.transitions[S.pairIdx].to_var : "sin par";
-  $("st-pairs").textContent = `${S.transitions.length} pares`;
-  $("st-mapped").textContent = `${Object.keys(S.done).length} ✓`;
-  $("st-err").textContent = `${errs} errores`;
-  $("st-warn").textContent = `${S.issues.filter(i => i.level === "warning").length} avisos`;
+    v.textContent = w ? `⚠ ${w} ${S.lang === "es" ? "avis" : "warn"}` : (S.lang === "es" ? "✓ válido" : "✓ valid"); v.className = "vpill " + (w ? "warn" : "ok"); }
+  $("tb-file").textContent = S.file ? S.file.split(/[\\/]/).pop() : t("no_file");
+  $("tb-pair").textContent = S.pairIdx >= 0 ? S.transitions[S.pairIdx].from_var + "→" + S.transitions[S.pairIdx].to_var : t("no_pair");
+  $("st-pairs").textContent = `${S.transitions.length} ${t("pairs_u")}`;
+  $("st-mapped").textContent = `${Object.keys(S.done).length} ${t("mapped_u")}`;
+  $("st-err").textContent = `${errs} ${t("errors_u")}`;
+  $("st-warn").textContent = `${S.issues.filter(i => i.level === "warning").length} ${t("warnings_u")}`;
 }
 function status(m) { $("st-msg").textContent = m; }
 
@@ -456,7 +486,7 @@ function drawMini() {
     // Modo rápido: 1 en A + 1 en B con clic simple → conecta solo sin botón.
     if (S.quick && plain && S.selA.size === 1 && S.selB.size === 1) {
       addConn([...S.selA], [...S.selB]);
-      toast(`Rápido: <b>A${[...S.conns[S.conns.length-1].f]} → B${[...S.conns[S.conns.length-1].t]}</b> conectada.`, 2200);
+      toast(`${t("quick_prefix")} <b>A${[...S.conns[S.conns.length-1].f]} → B${[...S.conns[S.conns.length-1].t]}</b> ${t("quick_made")}.`, 2200);
       inspectConn(S.conns.length - 1);
       return;
     }
@@ -485,10 +515,12 @@ function layoutScale() { return S._layoutS || 120; }
 function redraw() {
   drawCanvas();
   const sel = [...S.selA].sort((a,b)=>a-b).map(i => "A"+i).concat([...S.selB].sort((a,b)=>a-b).map(i => "B"+i));
-  $("selinfo").textContent = sel.length ? "sel=[" + sel.join(" ") + "]" : "clic: selecciona · arrastre: rectángulo · Espacio+arrastrar: mover";
+  $("selinfo").textContent = sel.length ? "sel=[" + sel.join(" ") + "]" : (S.lang === "es" ? "clic: selecciona · arrastre: rectángulo · Espacio+arrastrar: mover" : "click: select · drag: marquee · Space+drag: pan");
   $("gm-prev").textContent = S.conns.length
     ? "glyph_map = [\n" + S.conns.map(c => `  ([${c.f}], [${c.t}]),  # ${connKind(c)}`).join("\n") + "\n]"
-    : "glyph_map = [\n  # vacío: clic A → clic B conecta solo;\n  # Ctrl/Shift suma N→M y pulsa Conectar;\n  # o acepta las sugerencias grises.\n]";
+    : (S.lang === "es"
+      ? "glyph_map = [\n  # vacío: clic A → clic B conecta solo;\n  # Ctrl/Shift suma N→M y pulsa Conectar;\n  # o acepta las sugerencias grises.\n]"
+      : "glyph_map = [\n  # empty: click A then click B auto-connects;\n  # Ctrl/Shift adds N→M then press Connect;\n  # or accept the grey suggestions.\n]");
   const cl = $("c-list"); cl.innerHTML = "";
   $("c-count").textContent = S.conns.length ? `${S.conns.length}` : "";
   S.conns.forEach((c, i) => {
@@ -496,7 +528,7 @@ function redraw() {
     d.className = "tr" + (S._delIdx === i ? " cur" : "");
     d.style.borderLeft = `4px solid ${connColor(i)}`;
     d.innerHTML = `<span class="badge">[${i}]</span><span>[${c.f}] → [${c.t}]</span><span class="hint">${connKind(c)}</span>`;
-    d.title = "Clic: inspeccionar · marca y pulsa Eliminar";
+    d.title = t("insp_row_title");
     d.onmouseenter = () => document.querySelectorAll("#stage path.conn").forEach(p => p.classList.toggle("hl", +p.dataset.c === i));
     d.onmouseleave = () => document.querySelectorAll("#stage path.conn.hl").forEach(p => p.classList.remove("hl"));
     d.onclick = () => { S._delIdx = (S._delIdx === i ? undefined : i); inspectConn(i); redraw(); };
@@ -505,28 +537,28 @@ function redraw() {
   (S.sugg || []).forEach((sg, k) => {
     const d = document.createElement("div");
     d.className = "tr sugg";
-    d.innerHTML = `<span class="badge">◌</span><span>[${sg.f}] → [${sg.t}]</span><span class="hint">sugerida · clic acepta</span>`;
-    d.title = "Sugerencia única por forma: clic para aceptarla";
+    d.innerHTML = `<span class="badge">◌</span><span>[${sg.f}] → [${sg.t}]</span><span class="hint">${S.lang === "es" ? "sugerida · clic acepta" : "suggested · click accepts"}</span>`;
+    d.title = t("sugg_title");
     d.onclick = () => acceptSugg(k);
     cl.appendChild(d);
   });
-  $("dock-sum").textContent = `${S.conns.length} conexiones`;
+  $("dock-sum").textContent = `${S.conns.length} ${t("conns_u")}`;
   refreshIssues();
 }
 function inspectConn(i) {
   const c = S.conns[i]; if (!c) return;
-  $("inspector").innerHTML = `<b style="color:${connColor(i)}">● Conexión ${i} — ${connKind(c)}</b><br><code>[${c.f}] → [${c.t}]</code><br><span class="hint">Marca y pulsa Eliminar para quitarla.</span>`;
+  $("inspector").innerHTML = `<b style="color:${connColor(i)}">● ${t("insp_conn")} ${i} — ${connKind(c)}</b><br><code>[${c.f}] → [${c.t}]</code><br><span class="hint">${t("insp_del_hint")}</span>`;
 }
 function inspectSel() {
   const all = [...S.selA].map(i => ["A", i]).concat([...S.selB].map(i => ["B", i]));
-  if (!all.length) { $("inspector").innerHTML = "<p class='muted'>Selecciona un glifo o una conexión.</p>"; return; }
+  if (!all.length) { $("inspector").innerHTML = `<p class='muted'>${t("insp_empty")}</p>`; return; }
   const pay = all[0][0] === "A" ? S.gA : S.gB;
   const g = pay.glyphs.find(g => g.index === all[0][1]);
   const cc = glyphConns(all[0][0], all[0][1]);
-  $("inspector").innerHTML = `<b>Glifo ${all[0][1]}</b> <span class="hint">${all[0][0] === "A" ? "origen" : "destino"}</span><br>` +
-    `tipo <code>${g.type_name}</code> · <code>${g.width.toFixed(2)}×${g.height.toFixed(2)}</code> · ${g.points.length} pts<br>` +
-    (cc.length ? `<span class="hint">en conexiones ${cc.map(i => `<b style="color:${connColor(i)}">${i}</b>`).join(", ")}</span>` : `<span class="hint">sin correspondencia explícita</span>`) +
-    (all.length > 1 ? `<br><span class="hint">+${all.length - 1} seleccionados</span>` : "");
+  $("inspector").innerHTML = `<b>${S.lang === "es" ? "Glifo" : "Glyph"} ${all[0][1]}</b> <span class="hint">${all[0][0] === "A" ? (S.lang === "es" ? "origen" : "source") : (S.lang === "es" ? "destino" : "target")}</span><br>` +
+    `${S.lang === "es" ? "tipo" : "type"} <code>${g.type_name}</code> · <code>${g.width.toFixed(2)}×${g.height.toFixed(2)}</code> · ${g.points.length} pts<br>` +
+    (cc.length ? `<span class="hint">${S.lang === "es" ? "en conexiones" : "in connections"} ${cc.map(i => `<b style="color:${connColor(i)}">${i}</b>`).join(", ")}</span>` : `<span class="hint">${S.lang === "es" ? "sin correspondencia explícita" : "no explicit match"}</span>`) +
+    (all.length > 1 ? `<br><span class="hint">+${all.length - 1} ${S.lang === "es" ? "seleccionados" : "selected"}</span>` : "");
 }
 function snap() { S.undo.push(JSON.stringify(S.conns)); S.redo = []; }
 
@@ -535,20 +567,20 @@ $("f-go").onclick = async () => {
   const path = $("f-path").value.trim();
   const btn = $("f-go"); btn.disabled = true;
   const rep = $("report");
-  status(`Leyendo ${path} …`);
+  status(`${t("reading_st")} ${path} …`);
   rep.className = "report";
-  rep.innerHTML = "<p class='muted'>Leyendo y analizando…</p>";
+  rep.innerHTML = `<p class='muted'>${t("reading_body")}</p>`;
   let r;
   try { r = await api("/api/parse", {path}, 60000); }
   catch (e) {
     rep.className = "report err";
-    rep.innerHTML = `<b>El servidor no responde.</b><br><span class="hint">¿Abriste la app con <code>web_start.bat</code> (http://127.0.0.1:8765/)? Si abriste el .html como archivo, la API no existe. Detalle: ${e}</span>`;
-    status("Servidor no responde."); btn.disabled = false; return;
+    rep.innerHTML = `<b>${t("read_fail")}.</b><br><span class="hint">${r.error || "?"}</span>`;
+    status(t("server_down")); btn.disabled = false; return;
   }
   if (!r.transitions) {
     rep.className = "report err";
-    rep.innerHTML = `<b>No se pudo leer el .py.</b><br><span class="hint">${r.error || "?"}</span>`;
-    status("Error: " + (r.error || "?")); toast("No se pudo leer el .py", 4000, true);
+    rep.innerHTML = `<b>${t("read_fail")}.</b><br><span class="hint">${r.error || "?"}</span>`;
+    status(`${t("read_fail")}: ` + (r.error || "?")); toast(t("read_fail"), 4000, true);
     btn.disabled = false; return;
   }
   S.file = path; S.formulas = r.formulas; S.transitions = r.transitions; S.warnings = r.warnings; S.maps = {}; S.done = {}; S.pre = {}; S._preSeq = (S._preSeq || 0) + 1;
@@ -563,29 +595,35 @@ $("f-go").onclick = async () => {
     if (raw) { const o = JSON.parse(raw); const m = (o && o.v === 1 && o.maps) ? o.maps : o; nPrev = Object.keys(m || {}).length; hadPrev = nPrev > 0; }
   } catch (e) {}
   if (hadPrev) {
-    if (confirm(`Hay ${nPrev} mapa(s) guardados de una sesión anterior${nPre ? ` + ${nPre} precargado(s) del .py` : ""}. ¿Recuperar lo guardado (manda sobre el .py)?\nAceptar = recuperar · Cancelar = usar ${nPre ? "la precarga del .py" : "mapas limpios"}.`)) restoreMaps();
+    const msgPre = nPre ? ` + ${nPre} ${t("prefilled_u")}` : "";
+    const msgUse = nPre ? (S.lang === "es" ? "la precarga del .py" : "the .py preload") : (S.lang === "es" ? "mapas limpios" : "clean maps");
+    const msgQ = S.lang === "es"
+      ? `¿Recuperar lo guardado (manda sobre el .py)?\nAceptar = recuperar · Cancelar = usar ${msgUse}.`
+      : `Recover saved work (wins over the .py)?\nOK = recover · Cancel = use ${msgUse}.`;
+    const msgHave = S.lang === "es" ? "mapa(s) guardados de una sesión anterior" : "map(s) saved from a previous session";
+    if (confirm(`${S.lang === "es" ? "Hay" : "Found"} ${nPrev} ${msgHave}${msgPre}. ${msgQ}`)) restoreMaps();
     else { try { localStorage.removeItem("mf-maps::" + path); } catch (e) {} }
   }
   S.pairIdx = -1; S.gA = S.gB = null; S.view = null;
   $("report").className = "report " + (r.warnings.length ? "warn" : "ok");
-  $("report").innerHTML = `<b>${r.formulas.length}</b> fórmulas · <b>${r.transitions.length}</b> transiciones · <b>${r.warnings.length}</b> avisos` +
-    (nPre ? ` · <b>${nPre}</b> mapa(s) precargado(s) del .py` : "") +
-    (r.warnings.length ? "<ul>" + r.warnings.map(w => `<li>${w}</li>`).join("") : "<p>0 avisos: extracción limpia.</p>");
-  $("t-count").textContent = `${r.transitions.length} pares`;
+  $("report").innerHTML = `<b>${r.formulas.length}</b> ${t("formulas_u")} · <b>${r.transitions.length}</b> ${t("trans_u")} · <b>${r.warnings.length}</b> ${t("warnings_u")}` +
+    (nPre ? ` · <b>${nPre}</b> ${t("prefilled_u")}` : "") +
+    (r.warnings.length ? "<ul>" + r.warnings.map(w => `<li>${w}</li>`).join("") : `<p>${t("clean_extract")}</p>`);
+  $("t-count").textContent = `${r.transitions.length} ${t("pairs_u")}`;
   buildPairSel(""); renderTList("");
   if (r.transitions.length) { $("pair-sel").selectedIndex = 0; await loadPair(0); go("t-map"); preloadRest(); }
-  stepper(); status(`Cargado: ${r.transitions.length} pares, ${Object.keys(S.done).length} completos ✓.`);
+  stepper(); status(S.lang === "es" ? `Cargado: ${r.transitions.length} pares, ${Object.keys(S.done).length} completos ✓.` : `Loaded: ${r.transitions.length} pairs, ${Object.keys(S.done).length} complete ✓.`);
   btn.disabled = false;
 };
 $("t-filter").oninput = e => renderTList(e.target.value.toLowerCase());
 $("b-wipemaps").onclick = () => {
   const n = Object.keys(S.maps).length;
-  if (!n && !S.conns.length) return toast("No hay mapas que descartar.", 2500);
-  if (!confirm(`¿Descartar los ${n} mapa(s) guardados + conexiones actuales? Se pierde el trabajo de este archivo.`)) return;
+  if (!n && !S.conns.length) return toast(t("no_maps"), 2500);
+  if (!confirm(S.lang === "es" ? `¿Descartar los ${n} mapa(s) guardados + conexiones actuales? Se pierde el trabajo de este archivo.` : `Discard the ${n} saved map(s) + current connections? This file's work will be lost.`)) return;
   S.maps = {}; S.done = {}; S.conns = []; S.undo = []; S.redo = [];
   try { localStorage.removeItem("mf-maps::" + S.file); } catch (e) {}
   renderTList($("t-filter").value.toLowerCase()); buildPairSel($("pair-filter").value.toLowerCase());
-  redraw(); stepper(); status("Mapas descartados: todo limpio.");
+  redraw(); stepper(); status(t("wiped_st"));
 };
 /* Sugerencias: solo coincidencia ÚNICA 1:1 por forma (si hay varias, manual). Nunca se guardan solas. */
 function shapeSig(g) {
@@ -620,7 +658,7 @@ function pruneSugg() {
 }
 function updateSuggBtn() {
   const n = (S.sugg || []).length, b = $("b-sugg"), x = $("b-suggno");
-  if (b) { b.textContent = n ? `Aceptar ${n} sugerencia${n > 1 ? "s" : ""} ✓` : "Sin sugerencias"; b.disabled = !n; }
+  if (b) { b.textContent = n ? t("sugg_btn").replace("{n}", n).replace("{s}", n > 1 ? "s" : "") : t("sugg_none"); b.disabled = !n; }
   if (x) x.style.display = n ? "" : "none";
 }
 function acceptSugg(k) {
@@ -636,7 +674,7 @@ function acceptSugg(k) {
   S.sugg = (S.sugg || []).filter(sg => !ids.has(sg.f[0] + ":" + sg.t[0]));
   pruneSugg(); S.selA.clear(); S.selB.clear();
   redraw(); autoSave(); updateSuggBtn();
-  toast(`<b>${list.length}</b> sugerencia${list.length > 1 ? "s" : ""} aceptada${list.length > 1 ? "s" : ""}.`, 2500);
+  toast(S.lang === "es" ? `<b>${list.length}</b> sugerencia${list.length > 1 ? "s" : ""} aceptada${list.length > 1 ? "s" : ""}.` : `<b>${list.length}</b> suggestion${list.length > 1 ? "s" : ""} accepted.`, 2500);
 }
 /* Cobertura: ✓ solo si TODO glifo de A y B está en alguna conexión. Una sola fuente para lista + selector. */
 function pairCoverage(conns, nA, nB) {
@@ -687,7 +725,7 @@ function renderTList(f = "") {
       if (has) sel.value = want; await loadPair(i); go("t-map"); };
     L.appendChild(d);
   });
-  if (!L.children.length) L.innerHTML = '<p class="muted">Sin coincidencias: ajusta el filtro o carga un .py con TransformMatchingTex (o prueba la demo).</p>';
+  if (!L.children.length) L.innerHTML = `<p class="muted">${t("no_match")}</p>`;
 }
 function buildPairSel(f = "") {
   const sel = $("pair-sel"); sel.innerHTML = "";
@@ -728,8 +766,8 @@ async function loadPair(i) {
   // Aviso + lienzo vacío INMEDIATO: nada de glifos viejos con nombre de par nuevo.
   S.gA = S.gB = null; S.conns = []; S._map = null; S.sugg = []; updateSuggBtn();
   $("la-show").textContent = t.from_var; $("lb-show").textContent = t.to_var;
-  $("m-info").textContent = `⏳ Renderizando ${t.from_var}→${t.to_var} con Manim (~15s): lienzo vacío hasta terminar…`;
-  status(`Renderizando ${tid}…`);
+  $("m-info").textContent = `⏳ ${t("rendering_pair")} ${t.from_var}→${t.to_var} ${S.lang === "es" ? "con Manim (~15s)" : "with Manim (~15s)"}: ${t("rendering_hint")}…`;
+  status(`${t("rendering_pair")} ${tid}…`);
   redraw(); refreshMarks();
   let a, b;
   if (S.pre[i]) {
@@ -739,20 +777,20 @@ async function loadPair(i) {
   try { [a, b] = await Promise.all([
     api("/api/render", {latex: S.latexA, path: [0]}),
     api("/api/render", {latex: S.latexB, path: [0]})]); }
-  catch (e) { S.gA = S.gB = null; S.conns = []; redraw(); $("m-info").textContent = "Servidor no responde."; return; }
+  catch (e) { S.gA = S.gB = null; S.conns = []; redraw(); $("m-info").textContent = t("server_down"); return; }
   if (seq !== S._renderSeq) return; // cambiaste de par mientras renderizaba: este resultado ya no vale
   if (a.ok && b.ok) S.pre[i] = {gA: a, gB: b};
   }
-  if (!a.ok) { S.gA = S.gB = null; S.conns = []; redraw(); $("m-info").textContent = "ERROR inicial: " + a.error; return; }
-  if (!b.ok) { S.gA = S.gB = null; S.conns = []; redraw(); $("m-info").textContent = "ERROR final: " + b.error; return; }
+  if (!a.ok) { S.gA = S.gB = null; S.conns = []; redraw(); $("m-info").textContent = (S.lang === "es" ? "ERROR inicial: " : "SOURCE ERROR: ") + a.error; return; }
+  if (!b.ok) { S.gA = S.gB = null; S.conns = []; redraw(); $("m-info").textContent = (S.lang === "es" ? "ERROR final: " : "TARGET ERROR: ") + b.error; return; }
   S.gA = a; S.gB = b;
   const saved = S.maps[tid];
   S.conns = saved ? saved.map(([f, t2]) => ({f: [...f], t: [...t2]})) : [];
   computeDone(tid); computeSugg();
-  $("m-info").textContent = `✓ ${a.resolved_len} vs ${b.resolved_len} glifos` +
-    (a.warnings.concat(b.warnings).length ? " · AVISO ruta" : "") + (saved ? " · mapa restaurado" : " · par limpio, a mapear");
-  status(`Par ${tid} listo: ${a.resolved_len} vs ${b.resolved_len} glifos.`);
-  if ((S.sugg || []).length) toast(`<b>${S.sugg.length}</b> sugerencia${S.sugg.length > 1 ? "s únicas" : " única"} por forma — revísalas en gris y acepta.`, 5000);
+  $("m-info").textContent = `✓ ${a.resolved_len} vs ${b.resolved_len} ${t("glyphs_u")}` +
+    (a.warnings.concat(b.warnings).length ? (S.lang === "es" ? " · AVISO ruta" : " · PATH warning") : "") + (saved ? (S.lang === "es" ? " · mapa restaurado" : " · map restored") : (S.lang === "es" ? " · par limpio, a mapear" : " · clean pair, map it"));
+  status(`${S.lang === "es" ? "Par" : "Pair"} ${tid} ${t("pair_ready")}: ${a.resolved_len} vs ${b.resolved_len} ${t("glyphs_u")}.`);
+  if ((S.sugg || []).length) toast(S.lang === "es" ? `<b>${S.sugg.length}</b> sugerencia${S.sugg.length > 1 ? "s únicas" : " única"} por forma — revísalas en gris y acepta.` : `<b>${S.sugg.length}</b> unique-shape suggestion${S.sugg.length > 1 ? "s" : ""} — review the grey ones and accept.`, 5000);
   refreshMarks();
   redraw(); stepper();
 }
@@ -767,7 +805,7 @@ async function preloadRest() {
     if (S.pre[i]) { done++; continue; }
     if (i === S.pairIdx) { done++; continue; } // el usuario lo abrió: ya está en curso
     const t = S.transitions[i]; if (!t) { done++; continue; }
-    $("st-pre").textContent = `fondo ${done + 1}/${idxs.length} · ${t.from_var}→${t.to_var}…`;
+    $("st-pre").textContent = S.lang === "es" ? `fondo ${done + 1}/${idxs.length} · ${t.from_var}→${t.to_var}…` : `background ${done + 1}/${idxs.length} · ${t.from_var}→${t.to_var}…`;
     try {
       const [a, b] = await Promise.all([
         api("/api/render", {latex: t.latex_a, path: [0]}, 300000),
@@ -792,43 +830,45 @@ async function preloadRest() {
     done++;
     await new Promise(r => setTimeout(r, 400)); // respiro al servidor
   }
-  if (seq === S._preSeq) $("st-pre").textContent = `fondo completo · ${Object.keys(S.pre).length}/${S.transitions.length} listos`;
+  if (seq === S._preSeq) $("st-pre").textContent = S.lang === "es" ? `fondo completo · ${Object.keys(S.pre).length}/${S.transitions.length} listos` : `background done · ${Object.keys(S.pre).length}/${S.transitions.length} ready`;
 }
 function addConn(f, t) {
-  if (!f.length && !t.length) { toast("Selecciona al menos 1 glifo en algún panel (Ctrl suma).", 3000, true); return; }
+  if (!f.length && !t.length) { toast(t("add_sel"), 3000, true); return; }
   f = [...new Set(f)].sort((a,b)=>a-b); t = [...new Set(t)].sort((a,b)=>a-b);
   if (S.conns.some(c => JSON.stringify(c.f) === JSON.stringify(f) && JSON.stringify(c.t) === JSON.stringify(t))) {
-    toast("Conexión duplicada, ignorada.", 2500, true); return;
+    toast(t("dup_conn"), 2500, true); return;
   }
   const nA = S.gA.resolved_len, nB = S.gB.resolved_len;
-  if (f.some(x => x < 0 || x >= nA) || t.some(x => x < 0 || x >= nB)) { toast("Índice fuera de rango.", 2500, true); return; }
+  if (f.some(x => x < 0 || x >= nA) || t.some(x => x < 0 || x >= nB)) { toast(t("bad_idx"), 2500, true); return; }
   snap(); S.conns.push({f, t});
   S.selA.clear(); S.selB.clear(); redraw(); stepper(); autoSave();
 }
 $("b-conn").onclick = () => addConn([...S.selA], [...S.selB]);
 $("b-sugg").onclick = () => acceptSugg();
-$("b-suggno").onclick = () => { S.sugg = []; updateSuggBtn(); redraw(); status("Sugerencias descartadas: mapeo manual."); };
+$("b-suggno").onclick = () => { S.sugg = []; updateSuggBtn(); redraw(); status(S.lang === "es" ? "Sugerencias descartadas: mapeo manual." : "Suggestions dismissed: manual mapping."); };
 $("b-quick").onclick = () => {
   S.quick = !S.quick;
-  $("b-quick").textContent = S.quick ? "Rápido: ON" : "Rápido: OFF";
+  $("b-quick").textContent = S.quick ? t("quick_on") : t("quick_off");
   $("b-quick").classList.toggle("primary", S.quick);
-  toast(S.quick ? "Clic A → clic B conecta solo (1→1). Ctrl para N→M." : "Modo rápido OFF: usa Conectar N→M.", 3500);
+  toast(S.lang === "es"
+    ? (S.quick ? "Clic A → clic B conecta solo (1→1). Ctrl para N→M." : "Modo rápido OFF: usa Conectar N→M.")
+    : (S.quick ? "Click A → click B auto-connects (1→1). Ctrl for N→M." : "Quick mode OFF: use Connect N→M."), 3500);
 };
 $("b-curves").onclick = () => {
   S.hideConn = !S.hideConn;
   $("stage").classList.toggle("hide-conn", S.hideConn);
-  $("b-curves").textContent = S.hideConn ? "Líneas: OFF" : "Líneas: ON";
+  $("b-curves").textContent = S.hideConn ? t("curves_off") : t("curves_on");
 };
-$("b-fout").onclick = () => { if (!S.selA.size) return toast("Selecciona origen.", 2500, true); addConn([...S.selA], []); };
-$("b-fin").onclick = () => { if (!S.selB.size) return toast("Selecciona destino.", 2500, true); addConn([], [...S.selB]); };
+$("b-fout").onclick = () => { if (!S.selA.size) return toast(S.lang === "es" ? "Selecciona origen." : "Select a source.", 2500, true); addConn([...S.selA], []); };
+$("b-fin").onclick = () => { if (!S.selB.size) return toast(S.lang === "es" ? "Selecciona destino." : "Select a target.", 2500, true); addConn([], [...S.selB]); };
 $("b-del").onclick = () => {
-  if (S._delIdx === undefined || S._delIdx < 0 || S._delIdx >= S.conns.length) return toast("Marca una conexión en el panel.", 2500, true);
+  if (S._delIdx === undefined || S._delIdx < 0 || S._delIdx >= S.conns.length) return toast(S.lang === "es" ? "Marca una conexión en el panel." : "Mark a connection in the panel.", 2500, true);
   snap(); S.conns.splice(S._delIdx, 1); S._delIdx = undefined; redraw(); autoSave();
 };
 $("b-undo").onclick = () => { if (S.undo.length) { S.redo.push(JSON.stringify(S.conns)); S.conns = JSON.parse(S.undo.pop()); redraw(); autoSave(); } };
 $("b-redo").onclick = () => { if (S.redo.length) { S.undo.push(JSON.stringify(S.conns)); S.conns = JSON.parse(S.redo.pop()); redraw(); autoSave(); } };
 $("b-clear").onclick = () => {
-  if (!S.conns.length || !confirm("¿Borrar todas las conexiones? Se puede deshacer.")) return;
+  if (!S.conns.length || !confirm(S.lang === "es" ? "¿Borrar todas las conexiones? Se puede deshacer." : "Delete all connections? This is undoable.")) return;
   snap(); S.conns = []; redraw();
   // Limpiar también retira el mapa guardado: si no, el ◐/✓ fantasma sobreviviría.
   if (S.pairIdx >= 0 && S.transitions[S.pairIdx]) {
@@ -851,18 +891,21 @@ $("b-savemap").onclick = async () => {
     delete S.maps[tid]; delete S.done[tid];
     try { persistMaps(); } catch (e) {}
     refreshMarks();
-    toast(`Mapa <b>${tid}</b> vaciado (sin ✓).`); status(`Mapa ${tid} vaciado.`);
+    toast(`${S.lang === "es" ? "Mapa" : "Map"} <b>${tid}</b> ${S.lang === "es" ? "vaciado (sin ✓)." : "emptied (no ✓)."}`, 2500);
+    status(`${S.lang === "es" ? "Mapa" : "Map"} ${tid} ${S.lang === "es" ? "vaciado." : "emptied."}`);
     return;
   }
   S.maps[tid] = S.conns.map(c => [[...c.f], [...c.t]]);
   const cov = computeDone(tid);
   try { persistMaps(); } catch (e) {}
   refreshMarks();
-  const state = cov && cov.ok ? `completo ✓` :
-    `parcial ◐ (faltan A:[${cov ? cov.missA.join(",") : "?"}] B:[${cov ? cov.missB.join(",") : "?"}])`;
-  if (errs) toast(`Borrador guardado <b>${tid}</b> (${S.conns.length}) — ${state} — con <b>${errs} error(es)</b>, revísalos en Verificar.`, 5000);
-  else toast(`Mapa guardado <b>${tid}</b> (${S.conns.length}) — ${state} · ${nDone}/${S.transitions.length} completos`);
-  status(`Mapa guardado ${tid} (${state}). Completos: ${Object.keys(S.done).length}/${S.transitions.length}.`);
+  const state = cov && cov.ok ? t("complete_full") :
+    (S.lang === "es" ? `parcial ◐ (faltan A:[${cov ? cov.missA.join(",") : "?"}] B:[${cov ? cov.missB.join(",") : "?"}])`
+                     : `partial ◐ (missing A:[${cov ? cov.missA.join(",") : "?"}] B:[${cov ? cov.missB.join(",") : "?"}])`);
+  const compW = S.lang === "es" ? "completos" : "complete";
+  if (errs) toast(`${t("drafting")} <b>${tid}</b> (${S.conns.length}) — ${state} — ${t("with_errs")} <b>${errs} error(es)</b>, ${t("check_tab")}.`, 5000);
+  else toast(`${t("saved_map")} <b>${tid}</b> (${S.conns.length}) — ${state} · ${nDone}/${S.transitions.length} ${compW}`);
+  status(`${t("saved_map")} ${tid} (${state}). ${S.lang === "es" ? "Completos" : "Complete"}: ${Object.keys(S.done).length}/${S.transitions.length}.`);
 };
 function persistMaps() {
   if (!S.file) return;
@@ -907,8 +950,8 @@ function curVal() {
 async function refreshIssues() {
   const render = (box, interactive) => {
     box.innerHTML = "";
-    if (!S.gA) { box.innerHTML = '<p class="muted">Sin mapa todavía.</p>'; return; }
-    if (!S.issues.length) box.innerHTML = '<p class="muted">Limpio: sin errores ni avisos.</p>';
+    if (!S.gA) { box.innerHTML = `<p class="muted">${S.lang === "es" ? "Sin mapa todavía." : "No map yet."}</p>`; return; }
+    if (!S.issues.length) box.innerHTML = `<p class="muted">${t("issues_clean")}</p>`;
     S.issues.forEach((iss, i) => {
       const d = document.createElement("div");
       d.className = "issue " + iss.level;
@@ -921,7 +964,7 @@ async function refreshIssues() {
   let v;
   try { v = await api("/api/validate", curVal()); }
   catch (e) {
-    $("issues").innerHTML = '<p class="muted">Servidor no responde.</p>';
+    $("issues").innerHTML = `<p class="muted">${t("server_down")}</p>`;
     $("issues-dock").innerHTML = $("issues").innerHTML; return;
   }
   S.issues = v.issues || [];
@@ -963,7 +1006,7 @@ function dl(name, text, type = "text/plain") {
   a.href = URL.createObjectURL(new Blob([text], {type})); a.download = name; a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 5000);
 }
-$("e-snipdl").onclick = () => lastSnippet ? dl("glyph_map.py", lastSnippet) : toast("Genera el snippet primero.", 3000, true);
+$("e-snipdl").onclick = () => lastSnippet ? dl("glyph_map.py", lastSnippet) : toast(t("snip_first"), 3000, true);
 $("e-bundle").onclick = async () => {
   const meta = {};
   S.transitions.forEach(t => {
@@ -975,31 +1018,31 @@ $("e-bundle").onclick = async () => {
   let msg, ok = true;
   try {
     const back = JSON.parse(JSON.stringify(lastBundle));
-    msg = `<b>Verificación:</b> JSON válido · <b>${back.transitions.length}/${S.transitions.length}</b> transiciones · ids: ${back.transitions.map(t => t.id).join(", ")}`;
-  } catch (e) { ok = false; msg = "JSON INVÁLIDO: " + e; }
+    msg = `<b>${S.lang === "es" ? "Verificación" : "Check"}:</b> JSON ${S.lang === "es" ? "válido" : "valid"} · <b>${back.transitions.length}/${S.transitions.length}</b> ${t("trans_u")} · ids: ${back.transitions.map(t => t.id).join(", ")}`;
+  } catch (e) { ok = false; msg = "JSON INVALID: " + e; }
   const elx = $("bundle-report");
   elx.className = "report " + (ok ? "ok" : "err");
-  elx.innerHTML = msg + `<br><b>AGENTE.md:</b> ${lastAGENTE.length} caracteres` +
-    (lastAGENTE.includes("TransformByGlyphMap") ? ", con regla de reemplazo." : ", SIN regla — revisar.");
-  if (ok) toast(`Bundle verificado: <b>${lastBundle.transitions.length}</b> transiciones.`);
+  elx.innerHTML = msg + `<br><b>AGENTE.md:</b> ${lastAGENTE.length} ${t("agent_chars")}` +
+    (lastAGENTE.includes("TransformByGlyphMap") ? `, ${t("with_rule")}.` : `, ${t("without_rule")}.`);
+  if (ok) toast(`${S.lang === "es" ? "Bundle verificado" : "Bundle verified"}: <b>${lastBundle.transitions.length}</b> ${t("trans_u")}.`);
 };
-$("e-bdl").onclick = () => lastBundle ? dl("agent_bundle.json", JSON.stringify(lastBundle, null, 2), "application/json") : toast("Genera el bundle primero.", 3000, true);
-$("e-adl").onclick = () => lastAGENTE ? dl("AGENTE.md", lastAGENTE) : toast("Genera el bundle primero.", 3000, true);
+$("e-bdl").onclick = () => lastBundle ? dl("agent_bundle.json", JSON.stringify(lastBundle, null, 2), "application/json") : toast(t("bundle_first"), 3000, true);
+$("e-adl").onclick = () => lastAGENTE ? dl("AGENTE.md", lastAGENTE) : toast(t("bundle_first"), 3000, true);
 
 /* Paso 5 */
 $("p-gen").onclick = async () => {
-  $("p-info").textContent = "Renderizando en el servidor (~10s)…";
+  $("p-info").textContent = t("rendering_server");
   let r;
   try {
     r = await api("/api/preview", {latex_a: S.latexA, latex_b: S.latexB,
       glyph_map: S.conns.map(c => [c.f, c.t]), quality: "l"}, 320000);
-  } catch (e) { $("p-info").textContent = "Servidor no responde."; return; }
+  } catch (e) { $("p-info").textContent = t("server_down"); return; }
   if (!r.ok) { $("p-info").textContent = "ERROR: " + r.error; $("p-log").textContent = (r.log || "").slice(-1500); return; }
   const bust = "?t=" + Date.now();
   $("p-video").src = r.mp4 + bust; $("p-video").play().catch(() => {});
   $("p-frame").src = r.png + bust;
   const sent = S.conns.map(c => `[${c.f}]→[${c.t}]`).join(" ");
-  $("p-info").textContent = `Vista previa OK en ${r.seconds}s · ${S.conns.length} conexiones · ${new Date().toLocaleTimeString()} · ${sent}`;
+  $("p-info").textContent = `${t("preview_ok")} ${r.seconds}s · ${S.conns.length} ${t("conns_u")} · ${new Date().toLocaleTimeString()} · ${sent}`;
   $("p-log").textContent = (r.log || "").slice(-500);
 };
 
@@ -1008,18 +1051,24 @@ document.addEventListener("keydown", e => {
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k" && !e.target.matches("input,select,textarea")) {
     e.preventDefault(); go("t-map");
     const f = $("pair-filter"); f.focus(); f.select();
-    toast("Buscar par: escribe para filtrar el desplegable (p. ej. <code>eq5</code>).", 3000);
+    toast(t("search_pair_hint"), 3000);
   }
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z" && !e.target.matches("input,select,textarea")) {
     e.preventDefault(); $("b-undo").click();
   }
   if (e.key === "?" && !e.target.matches("input,select,textarea")) $("tb-help").click();
   if ((e.key === "Delete" || e.key === "Backspace") && document.activeElement === $("stage")) $("b-del").click();
-  if (e.key === "Escape" && !e.target.matches("input,select,textarea")) {
-    S.selA.clear(); S.selB.clear(); S._delIdx = undefined; redraw(); inspectSel(); status("Selección limpiada.");
-  }
   if ((e.key === "f" || e.key === "F") && !e.target.matches("input,select,textarea")) fitView();
+  if (e.key === "Escape" && !e.target.matches("input,select,textarea")) {
+    S.selA.clear(); S.selB.clear(); S._delIdx = undefined; redraw(); inspectSel(); status(t("sel_cleared"));
+  }
 });
+$("tb-lang").onclick = () => {
+  S.lang = S.lang === "es" ? "en" : "es";
+  try { localStorage.setItem("mf-lang", S.lang); } catch (e) {}
+  applyLang();
+};
+applyLang();
 $("f-path").value = "D:\\manim\\ejercicios\\cinetica_orden_cuatro.py";
 stepper();
 /* Requisitos: la app abre igual sin ellos, pero avisa claro en vez de fallar raro. */
@@ -1028,10 +1077,16 @@ stepper();
     const h = await (await fetch("/api/health")).json();
     if (!h.ok) {
       const faltan = h.checks.filter(c => !c.ok).map(c => c.name).join(", ");
-      toast(`<b>Faltan requisitos:</b> ${faltan}. Sin ellos no hay renders ni previas. Detalle en README (requirements.txt).`, 15000, true);
-      status(`Faltan requisitos: ${faltan}. La app abre igual, pero sin renders.`);
+      toast(S.lang === "es"
+        ? `<b>Faltan requisitos:</b> ${faltan}. Sin ellos no hay renders ni previas. Detalle en README (requirements.txt).`
+        : `<b>Missing requirements:</b> ${faltan}. No renders or previews without them. See README (requirements.txt).`, 15000, true);
+      status(S.lang === "es"
+        ? `Faltan requisitos: ${faltan}. La app abre igual, pero sin renders.`
+        : `Missing requirements: ${faltan}. The app still opens, but renders are off.`);
     } else {
-      status(`Requisitos OK: manim ${h.checks[0].detail} · MF_Tools + LaTeX presentes.`);
+      status(S.lang === "es"
+        ? `Requisitos OK: manim ${h.checks[0].detail} · MF_Tools + LaTeX presentes.`
+        : `Requirements OK: manim ${h.checks[0].detail} · MF_Tools + LaTeX present.`);
     }
     try { $("tb-file").title = `servidor rev ${h.rev || "?"} · arrancado ${h.started || "?"}`; } catch (e) {}
   } catch (e) { /* sin servidor no hay chequeo */ }
@@ -1071,22 +1126,22 @@ stepper();
     });
     const setTxt = (id, txt, hasFree) => { const e = $(id); if (!e) return;
       e.textContent = txt; e.classList.toggle("has-free", !!hasFree); };
-    setTxt("free-count-a", `A libres (${st.freeA.length}): ${st.freeA.join(", ") || "—"}`, st.freeA.length);
-    setTxt("free-count-b", `B libres (${st.freeB.length}): ${st.freeB.join(", ") || "—"}`, st.freeB.length);
-    setTxt("free-a-pill", S.gA ? `A libres ${st.freeA.length}/${S.gA.resolved_len}` : "", st.freeA.length);
-    setTxt("free-b-pill", S.gB ? `B libres ${st.freeB.length}/${S.gB.resolved_len}` : "", st.freeB.length);
-    const sum = $("free-sum"); if (sum) sum.textContent = S.gA ? `${st.freeA.length + st.freeB.length} libres` : "";
+    setTxt("free-count-a", `${t("free_a")} (${st.freeA.length}): ${st.freeA.join(", ") || "—"}`, st.freeA.length);
+    setTxt("free-count-b", `${t("free_b")} (${st.freeB.length}): ${st.freeB.join(", ") || "—"}`, st.freeB.length);
+    setTxt("free-a-pill", S.gA ? `${t("free_a")} ${st.freeA.length}/${S.gA.resolved_len}` : "", st.freeA.length);
+    setTxt("free-b-pill", S.gB ? `${t("free_b")} ${st.freeB.length}/${S.gB.resolved_len}` : "", st.freeB.length);
+    const sum = $("free-sum"); if (sum) sum.textContent = S.gA ? `${st.freeA.length + st.freeB.length} ${S.lang === "es" ? "libres" : "free"}` : "";
     const fill = (id, side, arr) => { const box = $(id); if (!box) return; box.innerHTML = "";
-      if (!S.gA) { box.innerHTML = '<p class="muted">Sin par.</p>'; return; }
-      if (!arr.length) { box.innerHTML = '<p class="muted">Ninguno: todo asignado ✓</p>'; return; }
+      if (!S.gA) { box.innerHTML = `<p class="muted">${t("free_nopair")}</p>`; return; }
+      if (!arr.length) { box.innerHTML = `<p class="muted">${t("free_none")}</p>`; return; }
       arr.forEach(idx => { const d = document.createElement("div"); d.className = "tr";
-        d.innerHTML = `<span class="badge">${side}${idx}</span><span>libre — clic para seleccionar</span>`;
+        d.innerHTML = `<span class="badge">${side}${idx}</span><span>${t("free_row")}</span>`;
         d.onclick = ev => { const sel = side === "A" ? S.selA : S.selB;
           if (!ev.ctrlKey && !ev.metaKey) sel.clear(); sel.add(idx); redraw(); inspectSel(); };
         box.appendChild(d); }); };
     fill("free-a-list", "A", st.freeA); fill("free-b-list", "B", st.freeB);
-    const ft = $("free-toggle"); if (ft) ft.textContent = `Resaltar libres: ${S._freeHi ? "ON" : "OFF"}`;
-    const fo = $("free-only"); if (fo) fo.textContent = S._freeOnly ? "Ver todos" : "Solo libres";
+    const ft = $("free-toggle"); if (ft) ft.textContent = S._freeHi ? t("free_on") : t("free_off");
+    const fo = $("free-only"); if (fo) fo.textContent = S._freeOnly ? t("free_all") : t("free_only");
     return st;
   };
   // caché por frame para no recalcular por nodo

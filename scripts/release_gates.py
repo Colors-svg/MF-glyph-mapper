@@ -60,6 +60,7 @@ def main() -> int:
                 "tour visible": pg.evaluate("!document.getElementById('tour-scrim').hidden"),
                 "health ok": pg.evaluate("fetch('/api/health').then(r=>r.json()).then(h=>h.ok)"),
                 "boton demo": pg.evaluate("!!document.getElementById('b-demo')"),
+                "boton idioma": pg.evaluate("!!document.getElementById('tb-lang')"),
                 "boton sugerencias": pg.evaluate("!!document.getElementById('b-sugg')"),
                 "21 botones mapa": pg.evaluate(
                     "['b-quick','b-conn','b-curves','b-fout','b-fin','b-del','b-undo','b-redo',"

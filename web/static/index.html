@@ -12,96 +12,97 @@
 <header class="topbar">
   <div class="brand">
     <img class="logo" src="/static/assets/mf_logo_contracted.svg" alt="MF">
-    <div><div class="name">MF Glyph Mapper</div><span class="sub">índices reales · Manim</span></div>
+    <div><div class="name">MF Glyph Mapper</div><span class="sub" data-i18n="brand_sub">índices reales · Manim</span></div>
     <span class="ver">v2.0</span>
   </div>
-  <div class="file" id="tb-file">sin archivo</div>
-  <div class="pair" id="tb-pair">sin par</div>
-  <div class="vpill" id="tb-valid" title="Estado de validación">—</div>
+  <div class="file" id="tb-file" data-i18n="no_file">sin archivo</div>
+  <div class="pair" id="tb-pair" data-i18n="no_pair">sin par</div>
+  <div class="vpill" id="tb-valid" data-i18n-title="valid_title" title="Estado de validación">—</div>
   <div class="spacer"></div>
+  <button id="tb-lang" class="tbtn" title="Switch to English">EN</button>
   <button id="tb-theme" class="tbtn" title="Claro / oscuro">◐</button>
   <button id="tb-help" class="tbtn" title="Atajos (?)">?</button>
 </header>
 <nav class="stepper" id="stepper">
-  <button data-tab="t-load"><span class="n">1</span> Cargar</button>
-  <button data-tab="t-map"><span class="n">2</span> Mapear</button>
-  <button data-tab="t-check"><span class="n">3</span> Verificar</button>
-  <button data-tab="t-export"><span class="n">4</span> Exportar</button>
-  <button data-tab="t-prev"><span class="n">5</span> Previa</button>
+  <button data-tab="t-load"><span class="n">1</span> <span data-i18n="step_load">Cargar</span></button>
+  <button data-tab="t-map"><span class="n">2</span> <span data-i18n="step_map">Mapear</span></button>
+  <button data-tab="t-check"><span class="n">3</span> <span data-i18n="step_check">Verificar</span></button>
+  <button data-tab="t-export"><span class="n">4</span> <span data-i18n="step_export">Exportar</span></button>
+  <button data-tab="t-prev"><span class="n">5</span> <span data-i18n="step_prev">Previa</span></button>
 </nav>
 <main id="workspace">
 <section id="t-load" class="tab active">
-  <div class="card narrow exp-head"><h2><span class="n">1</span> Cargar escena <span class="hint">lee el .py, no lo ejecuta</span></h2>
-    <div class="row exp-bar"><input id="f-path" type="text" spellcheck="false"><button id="f-go" class="primary">Cargar</button><button id="b-demo" class="ghost" title="Carga la escena demo incluida (3 pares, sin necesitar archivo propio)">Probar demo</button></div>
-    <div id="report" class="report"><p class="muted">Informe de importación: fórmulas, transiciones, fases y avisos.</p></div></div>
-  <div class="card narrow exp-head"><h2><span class="n">2</span> Transiciones <span id="t-count" class="hint"></span></h2>
-    <div class="row exp-bar"><input id="t-filter" type="text" placeholder="Filtrar por fase o variable…" spellcheck="false"><button id="b-wipemaps" class="ghost danger" title="Borra TODOS los mapas guardados (sesión + disco)">Descartar mapas</button></div>
-    <div id="t-list" class="tlist big"><p class="muted">Sin transiciones.</p></div></div>
+  <div class="card narrow exp-head"><h2><span class="n">1</span> <span data-i18n="load_title">Cargar escena</span> <span class="hint" data-i18n="load_hint">lee el .py, no lo ejecuta</span></h2>
+    <div class="row exp-bar"><input id="f-path" type="text" spellcheck="false"><button id="f-go" class="primary" data-i18n="load_btn">Cargar</button><button id="b-demo" class="ghost" data-i18n="demo_btn" data-i18n-title="demo_title" title="Carga la escena demo incluida (3 pares, sin necesitar archivo propio)">Probar demo</button></div>
+    <div id="report" class="report"><p class="muted" data-i18n="report_default">Informe de importación: fórmulas, transiciones, fases y avisos.</p></div></div>
+  <div class="card narrow exp-head"><h2><span class="n">2</span> <span data-i18n="trans_title">Transiciones</span> <span id="t-count" class="hint"></span></h2>
+    <div class="row exp-bar"><input id="t-filter" type="text" data-i18n-ph="filter_ph" placeholder="Filtrar por fase o variable…" spellcheck="false"><button id="b-wipemaps" class="ghost danger" data-i18n="wipemaps_btn" data-i18n-title="wipemaps_title" title="Borra TODOS los mapas guardados (sesión + disco)">Descartar mapas</button></div>
+    <div id="t-list" class="tlist big"><p class="muted" data-i18n="no_trans">Sin transiciones.</p></div></div>
 </section>
 <section id="t-map" class="tab">
   <div class="workbench">
     <div class="canvas-zone">
       <div class="pairbar">
-        <input id="pair-filter" type="text" placeholder="Buscar par…" spellcheck="false">
+        <input id="pair-filter" type="text" data-i18n-ph="pair_filter_ph" placeholder="Buscar par…" spellcheck="false">
         <select id="pair-sel"></select>
-        <button id="m-render" class="primary">Renderizar</button>
-        <button id="b-fit" title="Ajustar vista">⤢</button>
-        <button id="b-zin" class="zbtn" title="Acercar">+</button>
-        <button id="b-zout" class="zbtn" title="Alejar">−</button>
-        <label class="chk" title="Mostrar índices siempre o solo al pasar el ratón"><input type="checkbox" id="t-badges" checked> #idx</label>
+        <button id="m-render" class="primary" data-i18n="render_btn">Renderizar</button>
+        <button id="b-fit" data-i18n-title="fit_title" title="Ajustar vista">⤢</button>
+        <button id="b-zin" class="zbtn" data-i18n-title="zin_title" title="Acercar">+</button>
+        <button id="b-zout" class="zbtn" data-i18n-title="zout_title" title="Alejar">−</button>
+        <label class="chk" data-i18n-title="badges_title" title="Mostrar índices siempre o solo al pasar el ratón"><input type="checkbox" id="t-badges" checked> #idx</label>
         <span id="m-info" class="hint"></span>
-        <span id="free-a-pill" class="hint mono" title="Glifos origen sin asignar"></span>
-        <span id="free-b-pill" class="hint mono" title="Glifos destino sin asignar"></span>
+        <span id="free-a-pill" class="hint mono" data-i18n-title="free_a_title" title="Glifos origen sin asignar"></span>
+        <span id="free-b-pill" class="hint mono" data-i18n-title="free_b_title" title="Glifos destino sin asignar"></span>
       </div>
       <div class="panel canvas-wrap">
-        <h3 title="Par en edición: de A (origen) a B (destino)"><span id="la-show"></span> <span class="hint">·</span> <span id="lb-show"></span></h3>
+        <h3 data-i18n-title="pair_hint" title="Par en edición: de A (origen) a B (destino)"><span id="la-show"></span> <span class="hint">·</span> <span id="lb-show"></span></h3>
         <svg id="stage" tabindex="0"></svg>
-        <div id="minimap-box" title="Minimap: clic para navegar"><svg id="minimap"></svg></div>
+        <div id="minimap-box" data-i18n-title="minimap_title" title="Minimap: clic para navegar"><svg id="minimap"></svg></div>
         <div id="selinfo" class="hint mono"></div>
       </div>
-      <div class="legend"><span class="k" style="color:var(--c1)">●</span> contenido
-        <span class="k" style="color:var(--c0)">●</span> barra (frac/sqrt)
-        <span class="k" style="color:var(--sel)">●</span> seleccionado
-        <span class="k free-dot">○</span> libre (sin asignar)
-        <span class="k" style="color:var(--ok)">━</span> asignado
-        <span class="dim">clic A → clic B conecta · Ctrl suma individual · Shift rango · arrastre = rectángulo por zona · Espacio+arrastrar mueve · rueda zoom · doble clic encuadra</span></div>
+      <div class="legend"><span class="k" style="color:var(--c1)">●</span> <span data-i18n="leg_content">contenido</span>
+        <span class="k" style="color:var(--c0)">●</span> <span data-i18n="leg_bar">barra (frac/sqrt)</span>
+        <span class="k" style="color:var(--sel)">●</span> <span data-i18n="leg_sel">seleccionado</span>
+        <span class="k free-dot">○</span> <span data-i18n="leg_free">libre (sin asignar)</span>
+        <span class="k" style="color:var(--ok)">━</span> <span data-i18n="leg_used">asignado</span>
+        <span class="dim" data-i18n="leg_hint">clic A → clic B conecta · Ctrl suma individual · Shift rango · arrastre = rectángulo por zona · Espacio+arrastrar mueve · rueda zoom · doble clic encuadra</span></div>
       <div class="actions" role="toolbar" aria-label="Acciones de enlazado">
-        <div class="agroup" data-label="Modo">
-          <button id="b-quick" class="primary" title="Clic en A y luego clic en B conecta solo (1→1). Con Ctrl acumulas N→M y pulsas Conectar.">Rápido: ON</button>
-          <button id="b-curves" class="ghost" title="Mostrar / ocultar las líneas de conexión">Líneas: ON</button>
+        <div class="agroup" data-label="Modo" data-i18n-aria="g_mode" data-i18n-label="g_mode">
+          <button id="b-quick" class="primary" data-i18n-title="quick_title" title="Clic en A y luego clic en B conecta solo (1→1). Con Ctrl acumulas N→M y pulsas Conectar.">Rápido: ON</button>
+          <button id="b-curves" class="ghost" data-i18n-title="curves_title" title="Mostrar / ocultar las líneas de conexión">Líneas: ON</button>
         </div>
-        <div class="agroup" data-label="Conectar">
-          <button id="b-conn" class="primary" title="Conecta la selección actual N→M (usa Ctrl para acumular varios)">Conectar N→M</button>
-          <button id="b-fout" title="Los glifos A seleccionados desaparecen con fundido (sin destino)">Origen sin destino</button>
-          <button id="b-fin" title="Los glifos B seleccionados aparecen con fundido (sin origen)">Destino sin origen</button>
+        <div class="agroup" data-i18n-aria="g_connect" data-i18n-label="g_connect" data-label="Conectar">
+          <button id="b-conn" class="primary" data-i18n="conn_btn" data-i18n-title="conn_title" title="Conecta la selección actual N→M (usa Ctrl para acumular varios)">Conectar N→M</button>
+          <button id="b-fout" data-i18n="fout_btn" data-i18n-title="fout_title" title="Los glifos A seleccionados desaparecen con fundido (sin destino)">Origen sin destino</button>
+          <button id="b-fin" data-i18n="fin_btn" data-i18n-title="fin_title" title="Los glifos B seleccionados aparecen con fundido (sin origen)">Destino sin origen</button>
         </div>
-        <div class="agroup" data-label="Sugerir">
-          <button id="b-sugg" class="ghost" title="Solo coincidencias únicas 1:1 por forma; si hay varias, se mapea a mano">Sin sugerencias</button>
-          <button id="b-suggno" class="ghost" title="Descarta las sugerencias de este par">Ignorar</button>
+        <div class="agroup" data-i18n-aria="g_suggest" data-i18n-label="g_suggest" data-label="Sugerir">
+          <button id="b-sugg" class="ghost" data-i18n-title="sugg_title" title="Solo coincidencias únicas 1:1 por forma; si hay varias, se mapea a mano">Sin sugerencias</button>
+          <button id="b-suggno" class="ghost" data-i18n="sugg_no" data-i18n-title="sugg_no_title" title="Descarta las sugerencias de este par">Ignorar</button>
         </div>
-        <div class="agroup" data-label="Editar">
-          <button id="b-del" class="danger" title="Marca una conexión (clic en la línea o en la lista) y pulsa Eliminar — o tecla Supr">Eliminar</button>
-          <button id="b-undo" title="Deshacer (Ctrl+Z)">Deshacer</button>
-          <button id="b-redo" title="Rehacer">Rehacer</button>
-          <button id="b-clear" title="Borrar todas las conexiones (se puede deshacer)">Limpiar</button>
+        <div class="agroup" data-i18n-aria="g_edit" data-i18n-label="g_edit" data-label="Editar">
+          <button id="b-del" class="danger" data-i18n="del_btn" data-i18n-title="del_title" title="Marca una conexión (clic en la línea o en la lista) y pulsa Eliminar — o tecla Supr">Eliminar</button>
+          <button id="b-undo" data-i18n="undo_btn" data-i18n-title="undo_title" title="Deshacer (Ctrl+Z)">Deshacer</button>
+          <button id="b-redo" data-i18n="redo_btn" data-i18n-title="redo_title" title="Rehacer">Rehacer</button>
+          <button id="b-clear" data-i18n="clear_btn" data-i18n-title="clear_title" title="Borrar todas las conexiones (se puede deshacer)">Limpiar</button>
         </div>
-        <div class="agroup" data-label="Mapa">
-          <button id="b-savemap" class="primary" title="Verifica y guarda el mapa de este par">Guardar mapa ✓</button>
-          <button id="side-toggle" class="ghost" title="Mostrar / ocultar el panel lateral">Panel</button>
+        <div class="agroup" data-i18n-aria="g_map" data-i18n-label="g_map" data-label="Mapa">
+          <button id="b-savemap" class="primary" data-i18n="save_btn" data-i18n-title="save_title" title="Verifica y guarda el mapa de este par">Guardar mapa ✓</button>
+          <button id="side-toggle" class="ghost" data-i18n="panel_btn" data-i18n-title="panel_title" title="Mostrar / ocultar el panel lateral">Panel</button>
         </div>
       </div>
     </div>
     <aside class="sidebar" id="sidebar">
-      <div class="side-sec"><h3>Conexiones <span id="c-count" class="hint"></span></h3><div id="c-list" class="tlist"></div></div>
-      <div class="side-sec"><h3>Inspector</h3><div id="inspector" class="inspect"><p class="muted">Selecciona un glifo o una conexión.</p></div></div>
-      <div class="side-sec" id="free-sec"><h3>Estado de glifos <span id="free-sum" class="hint"></span></h3>
+      <div class="side-sec"><h3><span data-i18n="conn_h">Conexiones</span> <span id="c-count" class="hint"></span></h3><div id="c-list" class="tlist"></div></div>
+      <div class="side-sec"><h3 data-i18n="insp_h">Inspector</h3><div id="inspector" class="inspect"><p class="muted" data-i18n="insp_empty">Selecciona un glifo o una conexión.</p></div></div>
+      <div class="side-sec" id="free-sec"><h3><span data-i18n="free_h">Estado de glifos</span> <span id="free-sum" class="hint"></span></h3>
         <div class="row wrap" style="margin-bottom:6px">
-          <button id="free-toggle" class="ghost" title="Resaltar glifos sin asignar">Resaltar libres: ON</button>
-          <button id="free-only" class="ghost" title="Atenuar asignados, dejar solo libres">Solo libres</button>
+          <button id="free-toggle" class="ghost" data-i18n-title="free_on_title" title="Resaltar glifos sin asignar">Resaltar libres: ON</button>
+          <button id="free-only" class="ghost" data-i18n-title="free_only_title" title="Atenuar asignados, dejar solo libres">Solo libres</button>
         </div>
         <div class="row wrap" style="margin-bottom:6px">
-          <button id="free-sel-a" class="ghost" title="Seleccionar todos los libres de origen">Sel. libres A</button>
-          <button id="free-sel-b" class="ghost" title="Seleccionar todos los libres de destino">Sel. libres B</button>
+          <button id="free-sel-a" class="ghost" data-i18n="free_sel_a" data-i18n-title="free_sel_a_title" title="Seleccionar todos los libres de origen">Sel. libres A</button>
+          <button id="free-sel-b" class="ghost" data-i18n="free_sel_b" data-i18n-title="free_sel_b_title" title="Seleccionar todos los libres de destino">Sel. libres B</button>
         </div>
         <div class="hint mono" id="free-count-a"></div><div id="free-a-list" class="tlist small" style="margin-bottom:6px"></div>
         <div class="hint mono" id="free-count-b"></div><div id="free-b-list" class="tlist small"></div>
@@ -109,34 +110,34 @@
     </aside>
   </div>
   <div class="dock" id="dock">
-    <div class="dock-head"><button id="dock-toggle" class="ghost">▾ código + problemas</button><span id="dock-sum" class="hint"></span></div>
+    <div class="dock-head"><button id="dock-toggle" class="ghost" data-i18n="dock_btn">▾ código + problemas</button><span id="dock-sum" class="hint"></span></div>
     <div class="dock-body">
-      <figure class="shot"><figcaption><span class="n">⌁</span> glyph_map <span class="hint">en vivo</span></figcaption><pre id="gm-prev" class="code"></pre></figure>
-      <div class="dock-issues"><h3>Problemas <span class="hint">clic localiza</span></h3><div id="issues-dock" class="tlist small"></div></div>
+      <figure class="shot"><figcaption><span class="n">⌁</span> glyph_map <span class="hint" data-i18n="dock_live">en vivo</span></figcaption><pre id="gm-prev" class="code"></pre></figure>
+      <div class="dock-issues"><h3><span data-i18n="dock_issues">Problemas</span> <span class="hint" data-i18n="dock_locate">clic localiza</span></h3><div id="issues-dock" class="tlist small"></div></div>
     </div>
   </div>
 </section>
 <section id="t-check" class="tab">
-  <div class="card narrow exp-head"><h2><span class="n">3</span> Verificación <span class="hint">clic en un issue = localizar glifos</span></h2>
+  <div class="card narrow exp-head"><h2><span class="n">3</span> <span data-i18n="check_h">Verificación</span> <span class="hint" data-i18n="check_hint">clic en un issue = localizar glifos</span></h2>
     <div id="issues" class="tlist big"></div></div>
 </section>
 <section id="t-export" class="tab">
-  <div class="card narrow exp-head"><h2><span class="n">01</span> Snippet Python <span class="hint">pega directa en tu escena</span></h2>
-    <div class="row exp-bar"><button id="e-snip" class="primary">Generar snippet</button><button id="e-snipdl">Descargar .py</button></div>
-    <figure class="shot"><figcaption><span class="n">⌁</span> glyph_map <span class="hint">2-tuplas listas</span></figcaption><pre id="snip" class="code"></pre></figure></div>
-  <div class="card narrow exp-head"><h2><span class="n">02</span> Bundle para el agente <span class="hint">JSON + instrucciones</span></h2>
-    <div class="row exp-bar"><button id="e-bundle" class="primary">Generar bundle + AGENTE.md</button>
-    <button id="e-bdl">Descargar bundle.json</button><button id="e-adl">Descargar AGENTE.md</button></div>
-    <div id="bundle-report" class="report"><p class="muted">Verificación del bundle: JSON válido, nº de transiciones, ids.</p></div></div>
+  <div class="card narrow exp-head"><h2><span class="n">01</span> <span data-i18n="snip_h">Snippet Python</span> <span class="hint" data-i18n="snip_hint">pega directa en tu escena</span></h2>
+    <div class="row exp-bar"><button id="e-snip" class="primary" data-i18n="snip_btn">Generar snippet</button><button id="e-snipdl" data-i18n="snip_dl">Descargar .py</button></div>
+    <figure class="shot"><figcaption><span class="n">⌁</span> glyph_map <span class="hint" data-i18n="dock_tuples">2-tuplas listas</span></figcaption><pre id="snip" class="code"></pre></figure></div>
+  <div class="card narrow exp-head"><h2><span class="n">02</span> <span data-i18n="bundle_h">Bundle para el agente</span> <span class="hint" data-i18n="bundle_hint">JSON + instrucciones</span></h2>
+    <div class="row exp-bar"><button id="e-bundle" class="primary" data-i18n="bundle_btn">Generar bundle + AGENTE.md</button>
+    <button id="e-bdl" data-i18n="bundle_dl">Descargar bundle.json</button><button id="e-adl" data-i18n="agent_dl">Descargar AGENTE.md</button></div>
+    <div id="bundle-report" class="report"><p class="muted" data-i18n="bundle_report">Verificación del bundle: JSON válido, nº de transiciones, ids.</p></div></div>
 </section>
 <section id="t-prev" class="tab">
-  <div class="card narrow prev-head"><h2>Vista previa <span class="hint">Manim real en el servidor (~10s)</span></h2>
-    <div class="row prev-bar"><button id="p-gen" class="primary">Generar vista previa</button><span id="p-info" class="hint"></span></div></div>
+  <div class="card narrow prev-head"><h2><span data-i18n="prev_h">Vista previa</span> <span class="hint" data-i18n="prev_hint">Manim real en el servidor (~10s)</span></h2>
+    <div class="row prev-bar"><button id="p-gen" class="primary" data-i18n="prev_btn">Generar vista previa</button><span id="p-info" class="hint"></span></div></div>
   <div class="card narrow prev-grid">
-    <figure class="shot"><figcaption><span class="n">01</span> Video <span class="hint">mp4</span></figcaption><video id="p-video" controls playsinline></video></figure>
-    <figure class="shot"><figcaption><span class="n">02</span> Fotograma final <span class="hint">png</span></figcaption><img id="p-frame" alt="Fotograma final"></figure>
+    <figure class="shot"><figcaption><span class="n">01</span> <span data-i18n="shot_video">Video</span> <span class="hint">mp4</span></figcaption><video id="p-video" controls playsinline></video></figure>
+    <figure class="shot"><figcaption><span class="n">02</span> <span data-i18n="shot_frame">Fotograma final</span> <span class="hint">png</span></figcaption><img id="p-frame" data-i18n-alt="frame_alt" alt="Fotograma final"></figure>
   </div>
-  <div class="card narrow"><details class="logwrap"><summary>Registro del render <span class="hint">clic para ver</span></summary><pre id="p-log" class="code small"></pre></details></div>
+  <div class="card narrow"><details class="logwrap"><summary><span data-i18n="log_summary">Registro del render</span> <span class="hint" data-i18n="log_open">clic para ver</span></summary><pre id="p-log" class="code small"></pre></details></div>
 </section>
 </main>
 <footer class="statusbar" id="statusbar">
@@ -146,15 +147,16 @@
 <div class="toast-wrap" id="toasts"></div>
 <div class="drawer-scrim" id="scrim"></div>
 <div class="tour-scrim" id="tour-scrim" hidden>
-  <div class="tour-card" role="dialog" aria-label="Tour guiado">
+  <div class="tour-card" role="dialog" data-i18n-aria="tour_aria" aria-label="Tour guiado">
     <h2 id="tour-title"></h2>
     <p id="tour-body" class="muted"></p>
     <div class="row tour-bar"><span id="tour-step" class="hint"></span><span class="flex"></span>
-      <button id="tour-back" class="ghost">Atrás</button>
-      <button id="tour-next" class="primary">Siguiente</button>
-      <button id="tour-skip" class="ghost">Omitir</button></div>
+      <button id="tour-back" class="ghost" data-i18n="tour_back">Atrás</button>
+      <button id="tour-next" class="primary" data-i18n="tour_next">Siguiente</button>
+      <button id="tour-skip" class="ghost" data-i18n="tour_skip">Omitir</button></div>
   </div>
 </div>
+<script src="/static/i18n.js"></script>
 <script src="/app.js?v=23"></script>
 <script src="/static/zoom.js?v=2"></script>
 </body>
