@@ -97,7 +97,8 @@ class Handler(BaseHTTPRequestHandler):
             if not str(fp).startswith(str(WEB.resolve())) or not fp.is_file():
                 return self._send_json({"ok": False, "error": "no existe"}, 404)
             ct = {".html": "text/html; charset=utf-8", ".css": "text/css; charset=utf-8",
-                  ".js": "text/javascript; charset=utf-8"}.get(fp.suffix, "application/octet-stream")
+                  ".js": "text/javascript; charset=utf-8",
+                  ".svg": "image/svg+xml"}.get(fp.suffix, "application/octet-stream")
             return self._send_file(fp, ct)
         if u.path.startswith("/previews/"):
             name = Path(unquote(u.path)).name

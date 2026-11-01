@@ -1,3 +1,18 @@
+<div align="center">
+
+<img src="assets/mf_logo_expanded.svg" alt="MF Glyph Mapper" width="640">
+
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/)
+[![Manim 0.20.0](https://img.shields.io/badge/manim-0.20.0-orange.svg)](https://www.manim.community/)
+[![MF-Tools](https://img.shields.io/badge/MF--Tools-%3E%3D1.1.3-purple.svg)](https://github.com/TheMathematicFanatic/MF_Tools)
+[![Platform Windows](https://img.shields.io/badge/platform-windows-lightgrey.svg)](#instalación-3-pasos)
+[![Gates](https://img.shields.io/badge/gates-verde-brightgreen.svg)](RELEASE_CHECKLIST.md)
+
+*Visual glyph mapping for `TransformByGlyphMap` — sin adivinar índices.*
+
+</div>
+
 # MF Glyph Mapper
 
 Mapea glifos entre dos `MathTex` **visualmente** y exporta el `glyph_map` listo para

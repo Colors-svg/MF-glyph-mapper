@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1100" height="360" viewBox="0 0 1100 360">
+  <defs>
+    <linearGradient id="linear-gradient-1" x1="0" y1="0" x2="212.84" y2="650.343" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#141923"/>
+      <stop offset="0.6" stop-color="#0f141d"/>
+      <stop offset="1" stop-color="#0a0d13"/>
+    </linearGradient>
+    <clipPath id="clip-path-1">
+      <path d="M0 0 L28 0 L28 28 L0 28 Z"/>
+    </clipPath>
+    <pattern id="pattern-1" patternUnits="userSpaceOnUse" width="28" height="28" patternTransform="matrix(1 0 0 1 0 0)">
+      <g clip-path="url(#clip-path-1)">
+        <polyline points="28,0 0,0 0,28" fill="none" stroke="#222b3a" stroke-width="0.7"/>
+        <circle cx="28" cy="0" r="0.8" fill="#334257"/>
+      </g>
+    </pattern>
+    <filter id="filter-1" filterUnits="userSpaceOnUse" x="156" y="93" width="246" height="186" color-interpolation-filters="sRGB"><feGaussianBlur in="SourceAlpha" stdDeviation="5"/><feOffset dx="3" dy="5" result="shadow"/><feFlood flood-color="#000000" flood-opacity="0.4"/><feComposite in2="shadow" operator="in" result="paint"/><feMerge><feMergeNode in="paint"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <linearGradient id="linear-gradient-2" x1="225" y1="115" x2="330" y2="220" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#6475c4"/>
+      <stop offset="1" stop-color="#4a5792"/>
+    </linearGradient>
+    <linearGradient id="linear-gradient-3" x1="310" y1="150" x2="400.736" y2="216.858" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#f0886f"/>
+      <stop offset="1" stop-color="#cc5a41"/>
+    </linearGradient>
+    <linearGradient id="linear-gradient-4" x1="178" y1="153" x2="282" y2="257" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#7cdab6"/>
+      <stop offset="1" stop-color="#5fa88d"/>
+    </linearGradient>
+    <filter id="filter-2" filterUnits="userSpaceOnUse" x="60.5" y="62.5" width="225" height="205" color-interpolation-filters="sRGB"><feGaussianBlur in="SourceAlpha" stdDeviation="5"/><feOffset dx="3" dy="5" result="shadow"/><feFlood flood-color="#000000" flood-opacity="0.4"/><feComposite in2="shadow" operator="in" result="paint"/><feMerge><feMergeNode in="paint"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <filter id="filter-3" filterUnits="userSpaceOnUse" x="239.163" y="135.4" width="123.925" height="149.687" color-interpolation-filters="sRGB"><feGaussianBlur in="SourceAlpha" stdDeviation="3.9"/><feOffset dx="1.95" dy="3.9" result="shadow"/><feFlood flood-color="#000000" flood-opacity="0.45"/><feComposite in2="shadow" operator="in" result="paint"/><feMerge><feMergeNode in="paint"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <title>mf_logo_expanded.svg</title>
+  <g id="Layer_1" data-name="Layer 1">
+    <path d="M32 0 L1068 0 C1085.673 0 1100 14.327 1100 32 L1100 328 C1100 345.673 1085.673 360 1068 360 L32 360 C14.327 360 0 345.673 0 328 L0 32 C0 14.327 14.327 0 32 0 Z" fill="url(#linear-gradient-1)"/>
+    <path d="M40 16 L1060 16 C1073.255 16 1084 26.745 1084 40 L1084 320 C1084 333.255 1073.255 344 1060 344 L40 344 C26.745 344 16 333.255 16 320 L16 40 C16 26.745 26.745 16 40 16 Z" fill="url(#pattern-1)" opacity="0.6"/>
+    <path d="M44 24 L1056 24 C1067.046 24 1076 32.954 1076 44 L1076 316 C1076 327.046 1067.046 336 1056 336 L44 336 C32.954 336 24 327.046 24 316 L24 44 C24 32.954 32.954 24 44 24 Z" fill="none" stroke="#2a364a" stroke-width="1.2" stroke-dasharray="8 6"/>
+    <line x1="30" y1="85" x2="1070" y2="85" fill="#000000" stroke="#2b394f" stroke-dasharray="3 4"/>
+    <text transform="matrix(1 0 0 1 975 78)" x="0" y="0" xml:space="preserve" font-family="&apos;JetBrains Mono&apos;, monospace" font-size="10" fill="#4d6180" letter-spacing="1.5"><tspan x="0" y="0">CAP_HEIGHT</tspan></text>
+    <line x1="30" y1="245" x2="1070" y2="245" fill="#000000" stroke="#374864" stroke-width="1.2"/>
+    <text transform="matrix(1 0 0 1 980 238)" x="0" y="0" xml:space="preserve" font-family="&apos;JetBrains Mono&apos;, monospace" font-size="10" fill="#5b7496" letter-spacing="1.5"><tspan x="0" y="0">BASELINE</tspan></text>
+    <line x1="30" y1="290" x2="1070" y2="290" fill="#000000" stroke="#2a374b" stroke-dasharray="2 3"/>
+    <text transform="matrix(1 0 0 1 980 306)" x="0" y="0" xml:space="preserve" font-family="&apos;JetBrains Mono&apos;, monospace" font-size="10" fill="#4a5f7c" letter-spacing="1.5"><tspan x="0" y="0">DESCENT_SUB</tspan></text>
+    <g>
+      <g filter="url(#filter-1)">
+        <g>
+          <path d="M231 115 L324 115 C327.314 115 330 117.686 330 121 L330 214 C330 217.314 327.314 220 324 220 L231 220 C227.686 220 225 217.314 225 214 L225 121 C225 117.686 227.686 115 231 115 Z" fill="url(#linear-gradient-2)" opacity="0.95"/>
+          <polygon points="310,245 380,245 345,150" fill="url(#linear-gradient-3)" opacity="0.95"/>
+          <circle cx="230" cy="205" r="52" fill="url(#linear-gradient-4)" opacity="0.95"/>
+        </g>
+      </g>
+      <g opacity="0.7">
+        <path d="M287.796 91.909 C338.419 97.03 364.897 124.949 367.229 175.667" fill="none" stroke="#70d6ff" stroke-width="1.2" stroke-dasharray="3 3"/>
+        <path d="M289.104 94.609 C287.612 95.331 285.818 94.708 285.096 93.216 C284.374 91.725 284.998 89.931 286.489 89.209 C287.981 88.487 289.775 89.111 290.497 90.602 C291.219 92.093 290.595 93.887 289.104 94.609 Z" fill="#ffffff" stroke="#141923"/>
+        <path d="M368.537 178.367 C367.045 179.089 365.251 178.466 364.529 176.974 C363.807 175.483 364.431 173.689 365.922 172.967 C367.413 172.245 369.208 172.869 369.93 174.36 C370.652 175.851 370.028 177.645 368.537 178.367 Z" fill="#ffffff" stroke="#141923"/>
+        <path d="M272.783 164.171 C271.043 165.014 268.95 164.286 268.108 162.546 C267.265 160.806 267.993 158.713 269.733 157.871 C271.473 157.029 273.566 157.756 274.408 159.496 C275.251 161.236 274.523 163.329 272.783 164.171 Z" fill="#ffffff" stroke="#141923"/>
+        <path d="M286.671 284.66 C285.18 285.381 283.386 284.758 282.664 283.267 C281.942 281.775 282.565 279.981 284.057 279.259 C285.548 278.537 287.342 279.161 288.064 280.652 C288.786 282.143 288.162 283.938 286.671 284.66 Z" fill="#ffffff" stroke="#141923"/>
+      </g>
+      <g filter="url(#filter-2)">
+        <g>
+          <rect x="95" y="85" width="18" height="160" fill="#f8fafc" stroke="#f8fafc" stroke-linejoin="round"/>
+          <rect x="122" y="85" width="10" height="160" fill="#f8fafc" stroke="#f8fafc" stroke-linejoin="round"/>
+          <rect x="83" y="85" width="34" height="7" fill="#f8fafc" stroke="#f8fafc" stroke-linejoin="round"/>
+          <rect x="83" y="238" width="56" height="7" fill="#f8fafc" stroke="#f8fafc" stroke-linejoin="round"/>
+          <polygon points="130,96 183,200 195,200 139,88" fill="#f8fafc" stroke="#f8fafc" stroke-linejoin="round"/>
+          <polygon points="183,200 237,88 249,88 195,200" fill="#f8fafc" stroke="#f8fafc" stroke-linejoin="round"/>
+          <rect x="237" y="85" width="18" height="160" fill="#f8fafc" stroke="#f8fafc" stroke-linejoin="round"/>
+          <rect x="229" y="85" width="34" height="7" fill="#f8fafc" stroke="#f8fafc" stroke-linejoin="round"/>
+          <rect x="229" y="238" width="34" height="7" fill="#f8fafc" stroke="#f8fafc" stroke-linejoin="round"/>
+          <line x1="104" y1="92" x2="104" y2="238" fill="#f8fafc" stroke="#141923" stroke-width="3" stroke-linejoin="round"/>
+        </g>
+      </g>
+      <g opacity="0.7">
+        <path d="M527.027 103.728 C618.758 27.59 716.594 26.975 820.534 101.884" fill="none" stroke="#70d6ff" stroke-width="1.2" stroke-dasharray="3 3"/>
+        <path d="M529.922 104.515 C529.487 106.114 527.839 107.058 526.24 106.623 C524.641 106.189 523.698 104.54 524.132 102.941 C524.567 101.343 526.215 100.399 527.814 100.833 C529.413 101.268 530.357 102.917 529.922 104.515 Z" fill="#ffffff" stroke="#141923"/>
+        <path d="M823.428 102.672 C822.994 104.27 821.345 105.214 819.747 104.779 C818.148 104.345 817.204 102.696 817.639 101.097 C818.073 99.499 819.722 98.555 821.321 98.99 C822.919 99.424 823.863 101.073 823.428 102.672 Z" fill="#ffffff" stroke="#141923"/>
+        <path d="M571.673 162.499 C571.165 164.365 569.242 165.466 567.377 164.959 C565.512 164.452 564.411 162.528 564.918 160.663 C565.425 158.798 567.348 157.697 569.213 158.204 C571.079 158.711 572.18 160.634 571.673 162.499 Z" fill="#ffffff" stroke="#141923"/>
+        <path d="M671.668 231.137 C671.233 232.736 669.585 233.68 667.986 233.245 C666.387 232.81 665.444 231.162 665.878 229.563 C666.313 227.964 667.961 227.021 669.56 227.455 C671.159 227.89 672.103 229.538 671.668 231.137 Z" fill="#ffffff" stroke="#141923"/>
+      </g>
+    </g>
+    <g>
+      <line x1="390" y1="95" x2="390" y2="245" fill="#000000" stroke="#313f54" stroke-width="1.5" stroke-dasharray="4 4"/>
+      <circle cx="390" cy="95" r="3" fill="#68b699"/>
+      <circle cx="390" cy="170" r="4" fill="#70d6ff"/>
+      <circle cx="390" cy="245" r="3" fill="#e06c53"/>
+    </g>
+    <g>
+      <g>
+        <text transform="matrix(1 0 0 1 435 185)" x="0" y="0" xml:space="preserve" font-family="&apos;Computer Modern&apos;, sans-serif" font-size="78" font-weight="600" fill="#f8fafc" letter-spacing="1"><tspan x="0" y="0">Glyph</tspan></text>
+        <text transform="matrix(1 0 0 1 695 185)" x="0" y="0" xml:space="preserve" font-family="&apos;Computer Modern&apos;, sans-serif" font-size="78" fill="#e2e8f0" letter-spacing="1"><tspan x="0" y="0">Mapper</tspan></text>
+      </g>
+      <g>
+        <path d="M433.877 230 L821.123 230 C826.026 230 830 233.582 830 238 L830 252 C830 256.418 826.026 260 821.123 260 L433.877 260 C428.974 260 425 256.418 425 252 L425 238 C425 233.582 428.974 230 433.877 230 Z" fill="#18202d" stroke="#364964"/>
+        <text transform="matrix(1 0 0 1 439 250)" x="0" y="0" xml:space="preserve" font-family="&apos;JetBrains Mono&apos;, monospace" font-size="12" fill="#94a3b8" letter-spacing="0.5"><tspan x="0" y="0">\mathcal{G} </tspan><tspan x="92.4" y="0" fill="#70d6ff">\to</tspan><tspan x="115.5" y="0"> \text{VGroup}_{LaTeX} </tspan><tspan x="292.6" y="0" fill="#68b699">::</tspan><tspan x="308" y="0" fill="#f08b73">index\_map</tspan></text>
+      </g>
+      <text transform="matrix(1 0 0 1 440 290)" x="0" y="0" xml:space="preserve" font-family="&apos;JetBrains Mono&apos;, monospace" font-size="14" font-weight="500" fill="#7d91ad" letter-spacing="3.5"><tspan x="0" y="0">LATEX GLYPH INDEXING &amp; VECTOR MAPPING</tspan></text>
+      <g>
+        <path d="M851 230 L940 230 C944.418 230 948 233.582 948 238 L948 252 C948 256.418 944.418 260 940 260 L851 260 C846.582 260 843 256.418 843 252 L843 238 C843 233.582 846.582 230 851 230 Z" fill="#1b2333" stroke="#455a7a"/>
+        <text transform="matrix(1 0 0 1 895 249)" x="0" y="0" xml:space="preserve" font-family="&apos;JetBrains Mono&apos;, monospace" font-size="11" font-weight="bold" fill="#8ce0c0" letter-spacing="1" text-anchor="middle"><tspan x="0" y="0">v2.0 • AGY</tspan></text>
+      </g>
+    </g>
+    <g filter="url(#filter-3)">
+      <g>
+        <path d="M266.35 169.5 L335.9 169.5 C340.926 169.5 345 173.574 345 178.6 L345 257.9 C345 262.926 340.926 267 335.9 267 L266.35 267 C261.324 267 257.25 262.926 257.25 257.9 L257.25 178.6 C257.25 173.574 261.324 169.5 266.35 169.5 Z" fill="#111622" stroke="#41536b" stroke-width="0.975" stroke-dasharray="1.95 1.95" opacity="0.82"/>
+        <text transform="matrix(1 0 0 1 278.341 163.4)" x="0" y="0" xml:space="preserve" font-family="monospace" font-size="10.4" font-weight="bold" fill="#89a2c4"><tspan x="0" y="0">F</tspan></text>
+        <g>
+          <rect x="276.75" y="183.8" width="15.6" height="67.6" fill="#ffffff"/>
+          <rect x="271.55" y="247.5" width="26" height="5.2" fill="#ffffff"/>
+          <polygon points="292.35,183.8 332,183.8 332,200.7 320.95,200.7 320.95,194.2 292.35,194.2" fill="#ffffff"/>
+          <polygon points="292.35,213.7 320.95,213.7 320.95,224.1 313.15,224.1 313.15,220.2 292.35,220.2" fill="#ffffff"/>
+          <line x1="284.55" y1="189" x2="284.55" y2="246.2" fill="#ffffff" stroke="#131722" stroke-width="1.95"/>
+        </g>
+      </g>
+    </g>
+  </g>
+</svg>
