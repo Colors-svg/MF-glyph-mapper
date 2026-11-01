@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MF Glyph Mapper — Grafo real del proyecto</title>
+<style>
+body{margin:0;background:#0a0d13;color:#e2e8f0;font-family:monospace;padding:20px}
+h1{font-size:18px;margin:0 0 4px}p.meta{color:#8ca2bd;font-size:12px;margin:0 0 12px}
+#bar{display:flex;gap:14px;align-items:center;font-size:12px;color:#8ca2bd;margin:0 0 10px;flex-wrap:wrap}
+#bar label{cursor:pointer;display:flex;gap:6px;align-items:center}
+.sw{display:inline-block;width:22px;height:3px;border-radius:2px}
+button{background:#162032;color:#e2e8f0;border:1px solid #2a3648;border-radius:8px;padding:5px 12px;font-family:monospace;font-size:12px;cursor:pointer}
+button:hover{border-color:#6ea8ff}
+#stage{width:100%;height:78vh;background:#0d1117;border:1px solid #2a3648;border-radius:12px;touch-action:none;cursor:grab}
+#tip{position:fixed;pointer-events:none;background:#162032;border:1px solid #2a3648;border-radius:8px;padding:8px 10px;font-size:11px;display:none;max-width:320px;z-index:10}
+.note{color:#5b7496;font-size:11px;margin-top:10px}
+.chip{display:inline-block;background:#162032;border:1px solid #2a3648;border-radius:20px;padding:2px 10px;margin:2px;font-size:11px;color:#8ca2bd}
+</style>
+</head>
+<body>
+<h1>MF Glyph Mapper — Grafo real del proyecto</h1>
+<p class="meta" id="meta"></p>
+<div id="bar">
+<label><input type="checkbox" id="f-imp" checked><span class="sw" style="background:#6ea8ff"></span>IMPORTS</label>
+<label><input type="checkbox" id="f-calls" checked><span class="sw" style="background:#f0886f"></span>CALLS</label>
+<label><input type="checkbox" id="f-test" checked><span class="sw" style="background:#68b699"></span>TESTS</label>
+<label><input type="checkbox" id="f-http" checked><span class="sw" style="background:#f0a832"></span>HTTP</label>
+<label><input type="checkbox" id="f-lab" checked>etiquetas</label>
+<button id="reset">recolocar</button>
+<span id="hint">arrastra nodos · rueda = zoom · pasa el ratón para vecindad</span>
+</div>
+<svg id="stage" role="img" aria-label="Grafo de archivos del proyecto"></svg>
+<div id="tip"></div>
+<p class="note" id="iso"></p>
+<script>
+const DATA = {"nodes": [{"id": "src/mf_core/exporter.py", "label": "exporter.py", "group": "core"}, {"id": "src/mf_core/extractor.py", "label": "extractor.py", "group": "core"}, {"id": "src/mf_core/glyph_map_model.py", "label": "glyph_map_model.py", "group": "core"}, {"id": "src/mf_core/glyph_worker.py", "label": "glyph_worker.py", "group": "core"}, {"id": "src/mf_core/preview_worker.py", "label": "preview_worker.py", "group": "core"}, {"id": "src/mf_core/seq_extract.py", "label": "seq_extract.py", "group": "core"}, {"id": "src/mf_core/validator.py", "label": "validator.py", "group": "core"}, {"id": "src/mf_ui/app.py", "label": "app.py", "group": "ui"}, {"id": "src/mf_ui/flow_windows.py", "label": "flow_windows.py", "group": "ui"}, {"id": "src/mf_ui/icons.py", "label": "icons.py", "group": "ui"}, {"id": "src/mf_ui/inspector.py", "label": "inspector.py", "group": "ui"}, {"id": "src/mf_ui/onboarding.py", "label": "onboarding.py", "group": "ui"}, {"id": "src/mf_ui/seq_windows.py", "label": "seq_windows.py", "group": "ui"}, {"id": "tests/test_canvas.py", "label": "test_canvas.py", "group": "tests"}, {"id": "tests/test_exporter.py", "label": "test_exporter.py", "group": "tests"}, {"id": "tests/test_glyph_parity.py", "label": "test_glyph_parity.py", "group": "tests"}, {"id": "tests/test_model.py", "label": "test_model.py", "group": "tests"}, {"id": "tests/test_preview.py", "label": "test_preview.py", "group": "tests"}, {"id": "tests/test_seq.py", "label": "test_seq.py", "group": "tests"}, {"id": "tests/test_validator.py", "label": "test_validator.py", "group": "tests"}, {"id": "tests/test_web.py", "label": "test_web.py", "group": "tests"}, {"id": "web/server.py", "label": "server.py", "group": "web"}], "edges": [{"a": "tests/test_exporter.py", "b": "src/mf_core/exporter.py", "kind": "imp", "n": 4}, {"a": "tests/test_glyph_parity.py", "b": "src/mf_core/extractor.py", "kind": "imp", "n": 1}, {"a": "tests/test_model.py", "b": "src/mf_core/glyph_map_model.py", "kind": "imp", "n": 2}, {"a": "tests/test_validator.py", "b": "src/mf_core/validator.py", "kind": "imp", "n": 1}, {"a": "src/mf_ui/app.py", "b": "src/mf_ui/flow_windows.py", "kind": "imp", "n": 2}, {"a": "src/mf_ui/app.py", "b": "src/mf_ui/onboarding.py", "kind": "imp", "n": 2}, {"a": "src/mf_ui/flow_windows.py", "b": "src/mf_core/glyph_map_model.py", "kind": "imp", "n": 1}, {"a": "src/mf_ui/flow_windows.py", "b": "src/mf_core/validator.py", "kind": "imp", "n": 1}, {"a": "src/mf_ui/flow_windows.py", "b": "src/mf_core/exporter.py", "kind": "imp", "n": 4}, {"a": "src/mf_ui/flow_windows.py", "b": "src/mf_ui/inspector.py", "kind": "imp", "n": 7}, {"a": "src/mf_ui/flow_windows.py", "b": "src/mf_ui/icons.py", "kind": "imp", "n": 1}, {"a": "src/mf_ui/flow_windows.py", "b": "src/mf_ui/onboarding.py", "kind": "imp", "n": 1}, {"a": "src/mf_ui/inspector.py", "b": "src/mf_core/glyph_map_model.py", "kind": "imp", "n": 2}, {"a": "src/mf_ui/inspector.py", "b": "src/mf_core/validator.py", "kind": "imp", "n": 1}, {"a": "src/mf_ui/inspector.py", "b": "src/mf_core/exporter.py", "kind": "imp", "n": 4}, {"a": "web/server.py", "b": "src/mf_core/seq_extract.py", "kind": "imp", "n": 1}, {"a": "web/server.py", "b": "src/mf_core/validator.py", "kind": "imp", "n": 1}, {"a": "web/server.py", "b": "src/mf_core/exporter.py", "kind": "imp", "n": 4}, {"a": "tests/test_seq.py", "b": "src/mf_core/seq_extract.py", "kind": "imp", "n": 1}, {"a": "tests/test_seq.py", "b": "src/mf_core/exporter.py", "kind": "imp", "n": 2}, {"a": "tests/test_web.py", "b": "web/server.py", "kind": "imp", "n": 1}, {"a": "src/mf_ui/seq_windows.py", "b": "src/mf_core/seq_extract.py", "kind": "imp", "n": 2}, {"a": "src/mf_ui/seq_windows.py", "b": "src/mf_core/exporter.py", "kind": "imp", "n": 2}, {"a": "src/mf_ui/seq_windows.py", "b": "src/mf_ui/icons.py", "kind": "imp", "n": 1}, {"a": "src/mf_ui/flow_windows.py", "b": "src/mf_core/glyph_map_model.py", "kind": "calls", "n": 19}, {"a": "src/mf_ui/flow_windows.py", "b": "src/mf_ui/inspector.py", "kind": "calls", "n": 13}, {"a": "src/mf_ui/flow_windows.py", "b": "src/mf_ui/icons.py", "kind": "calls", "n": 3}, {"a": "src/mf_ui/flow_windows.py", "b": "src/mf_ui/onboarding.py", "kind": "calls", "n": 1}, {"a": "src/mf_ui/inspector.py", "b": "src/mf_ui/flow_windows.py", "kind": "calls", "n": 8}, {"a": "src/mf_ui/inspector.py", "b": "src/mf_core/glyph_map_model.py", "kind": "calls", "n": 20}, {"a": "src/mf_ui/seq_windows.py", "b": "src/mf_ui/icons.py", "kind": "calls", "n": 1}, {"a": "src/mf_ui/inspector.py", "b": "src/mf_core/exporter.py", "kind": "calls", "n": 3}, {"a": "src/mf_ui/seq_windows.py", "b": "src/mf_core/seq_extract.py", "kind": "calls", "n": 5}, {"a": "src/mf_ui/seq_windows.py", "b": "src/mf_core/exporter.py", "kind": "calls", "n": 2}, {"a": "src/mf_ui/flow_windows.py", "b": "src/mf_core/exporter.py", "kind": "calls", "n": 3}, {"a": "src/mf_ui/flow_windows.py", "b": "src/mf_ui/seq_windows.py", "kind": "calls", "n": 1}, {"a": "src/mf_core/glyph_worker.py", "b": "src/mf_core/extractor.py", "kind": "calls", "n": 1}, {"a": "web/server.py", "b": "src/mf_core/seq_extract.py", "kind": "calls", "n": 3}, {"a": "web/server.py", "b": "src/mf_core/validator.py", "kind": "calls", "n": 1}, {"a": "web/server.py", "b": "src/mf_core/exporter.py", "kind": "calls", "n": 4}, {"a": "src/mf_ui/seq_windows.py", "b": "src/mf_core/glyph_map_model.py", "kind": "calls", "n": 3}, {"a": "src/mf_ui/seq_windows.py", "b": "src/mf_ui/flow_windows.py", "kind": "calls", "n": 2}, {"a": "src/mf_ui/app.py", "b": "src/mf_ui/onboarding.py", "kind": "calls", "n": 2}, {"a": "src/mf_ui/app.py", "b": "src/mf_ui/flow_windows.py", "kind": "calls", "n": 2}, {"a": "src/mf_ui/inspector.py", "b": "src/mf_ui/app.py", "kind": "calls", "n": 1}, {"a": "src/mf_core/preview_worker.py", "b": "web/server.py", "kind": "calls", "n": 1}, {"a": "src/mf_ui/inspector.py", "b": "src/mf_core/validator.py", "kind": "calls", "n": 1}, {"a": "tests/test_model.py", "b": "src/mf_core/glyph_map_model.py", "kind": "calls", "n": 17}, {"a": "tests/test_seq.py", "b": "src/mf_core/exporter.py", "kind": "calls", "n": 2}, {"a": "tests/test_validator.py", "b": "src/mf_core/validator.py", "kind": "calls", "n": 2}, {"a": "tests/test_exporter.py", "b": "src/mf_core/exporter.py", "kind": "calls", "n": 5}, {"a": "tests/test_exporter.py", "b": "web/server.py", "kind": "calls", "n": 1}, {"a": "tests/test_seq.py", "b": "src/mf_core/seq_extract.py", "kind": "calls", "n": 3}, {"a": "tests/test_glyph_parity.py", "b": "src/mf_core/extractor.py", "kind": "calls", "n": 1}, {"a": "tests/test_preview.py", "b": "web/server.py", "kind": "calls", "n": 1}, {"a": "tests/test_glyph_parity.py", "b": "web/server.py", "kind": "calls", "n": 1}, {"a": "src/mf_core/validator.py", "b": "src/mf_core/glyph_map_model.py", "kind": "calls", "n": 1}, {"a": "src/mf_ui/flow_windows.py", "b": "src/mf_core/validator.py", "kind": "calls", "n": 1}, {"a": "tests/test_model.py", "b": "src/mf_core/glyph_map_model.py", "kind": "test", "n": 17}, {"a": "tests/test_seq.py", "b": "src/mf_core/exporter.py", "kind": "test", "n": 2}, {"a": "tests/test_validator.py", "b": "src/mf_core/validator.py", "kind": "test", "n": 2}, {"a": "tests/test_exporter.py", "b": "src/mf_core/exporter.py", "kind": "test", "n": 5}, {"a": "tests/test_exporter.py", "b": "web/server.py", "kind": "test", "n": 1}, {"a": "tests/test_seq.py", "b": "src/mf_core/seq_extract.py", "kind": "test", "n": 3}, {"a": "tests/test_glyph_parity.py", "b": "src/mf_core/extractor.py", "kind": "test", "n": 1}, {"a": "tests/test_preview.py", "b": "web/server.py", "kind": "test", "n": 1}, {"a": "tests/test_glyph_parity.py", "b": "web/server.py", "kind": "test", "n": 1}, {"a": "tests/test_canvas.py", "b": "web/server.py", "kind": "http", "n": 2}], "isolated": ["DECISIONS.md", "PROGRESS.md", "README.es.md", "README.md", "RELEASE_CHECKLIST.md", "VERIFIED_FACTS.md", "actualizar_acceso_directo.ps1", "demo/escena_demo.py", "requirements.txt", "src/mf_core/__init__.py", "src/mf_ui/__init__.py", "tests/test_contrast.py", "tests/test_ids.py"], "meta": {"project": "D-manim-mf-glyph-mapper", "files": 22, "edges": 68}};
+const COLORS = {core:"#6ea8ff", ui:"#b392f0", web:"#f0a832", tests:"#68b699", demo:"#70d6ff", other:"#8b93a5"};
+const KIND = {imp:"#6ea8ff", calls:"#f0886f", test:"#68b699", http:"#f0a832"};
+const svg = document.getElementById('stage'), tip = document.getElementById('tip');
+let W = 1200, H = 700;
+function size(){ const r = svg.getBoundingClientRect(); W = Math.max(600, r.width); H = Math.max(480, r.height); svg.setAttribute('viewBox', `0 0 ${W} ${H}`); }
+size(); addEventListener('resize', size);
+document.getElementById('meta').innerHTML =
+ `<b>${DATA.nodes.length}</b> archivos · <b>${DATA.edges.length}</b> aristas archivo→archivo · codebase-memory · proyecto <b>${DATA.meta.project}</b> · tipos IMPORTS/CALLS/TESTS/HTTP agregados por archivo`;
+document.getElementById('iso').innerHTML =
+ `Sin aristas archivo↔archivo en el índice (${DATA.isolated.length}): ` + DATA.isolated.map(f=>`<span class="chip">${f}</span>`).join(' ');
+const N = DATA.nodes.map((n,i)=>({...n, x: W/2 + 260*Math.cos(i/DATA.nodes.length*6.283), y: H/2 + 240*Math.sin(i/DATA.nodes.length*6.283), vx:0, vy:0}));
+const byId = Object.fromEntries(N.map(n=>[n.id,n]));
+const E = DATA.edges.map(e=>({...e}));
+function deg(id){ let d=0; for(const e of E){ if(e.a===id||e.b===id) d+=e.n; } return d; }
+N.forEach(n=>{ n.r = 13 + Math.min(16, Math.sqrt(deg(n.id))*3); });
+// pares bidireccionales -> curva
+const rev = new Set(E.map(e=>e.a+'|'+e.b));
+E.forEach(e=>{ e.both = rev.has(e.b+'|'+e.a); });
+const gE = document.createElementNS('http://www.w3.org/2000/svg','g');
+const gN = document.createElementNS('http://www.w3.org/2000/svg','g');
+svg.append(gE, gN);
+const NS='http://www.w3.org/2000/svg';
+function el(t,at,parent){ const e=document.createElementNS(NS,t); for(const k in at) e.setAttribute(k,at[k]); parent.appendChild(e); return e; }
+const defs = el('defs',{},svg);
+const mk = el('marker',{id:'arw',viewBox:'0 0 10 10',refX:9,refY:5,markerWidth:7,markerHeight:7,orient:'auto-start-reverse'},defs);
+el('path',{d:'M0,0 L10,5 L0,10 z',fill:'#8b93a5'},mk);
+let edgeEls=[], nodeEls=[];
+function build(){
+  gE.innerHTML=''; gN.innerHTML=''; edgeEls=[]; nodeEls=[];
+  const on = {imp:document.getElementById('f-imp').checked, calls:document.getElementById('f-calls').checked, test:document.getElementById('f-test').checked, http:document.getElementById('f-http').checked};
+  const showLab = document.getElementById('f-lab').checked;
+  for(const e of E){
+    if(!on[e.kind]) continue;
+    const A=byId[e.a], B=byId[e.b];
+    const w = 1 + Math.min(4, Math.sqrt(e.n));
+    const p = el('path',{fill:'none',stroke:KIND[e.kind],'stroke-width':w,opacity:.8,'marker-end':'url(#arw)','data-a':e.a,'data-b':e.b,'data-k':e.kind},gE);
+    p.innerHTML = `<title>${e.a} → ${e.b} · ${e.kind} ×${e.n}</title>`;
+    edgeEls.push({el:p, e});
+  }
+  for(const n of N){
+    const g = el('g',{cursor:'grab'},gN);
+    const c = el('circle',{r:n.r,fill:'#162032',stroke:COLORS[n.group]||'#8b93a5','stroke-width':2.2},g);
+    const t = el('text',{'text-anchor':'middle',y:4,'font-size':10.5,'font-family':'monospace',fill:'#e2e8f0',display:showLab?'':'none'},g);
+    t.textContent = n.label;
+    g.addEventListener('pointerdown', ev=>{ ev.stopPropagation(); drag=n; n.fx=n.x; n.fy=n.y; g.setPointerCapture(ev.pointerId); heat(); kick(); });
+    g.addEventListener('pointerup', ()=>{ drag=null; n.fx=null; n.fy=null; });
+    g.addEventListener('pointermove', ev=>{
+      if(drag===n){ const p=toSvg(ev); n.fx=p.x; n.fy=p.y; }
+      const r=n.id, nb=new Set([r]);
+      E.forEach(e=>{ if(e.a===r)nb.add(e.b); if(e.b===r)nb.add(e.a); });
+      tip.style.display='block'; tip.style.left=(ev.clientX+14)+'px'; tip.style.top=(ev.clientY+14)+'px';
+      let ins=0,outs=0; E.forEach(e=>{ if(e.b===r)ins+=e.n; if(e.a===r)outs+=e.n; });
+      tip.innerHTML=`<b>${n.id}</b><br>grupo ${n.group} · grado ${deg(r)}<br>in ${ins} · out ${outs}<br><span style="color:#5b7496">vecinos: ${[...nb].filter(x=>x!==r).map(x=>x.split('/').pop()).join(', ')||'—'}</span>`;
+      hiLite(r);
+    });
+    g.addEventListener('pointerleave', ()=>{ tip.style.display='none'; hiLite(null); });
+    nodeEls.push({g,c,t:id=>id,n});
+    nodeEls[nodeEls.length-1].n=n;
+  }
+}
+function hiLite(id){
+  const nb = id?new Set([id]):null;
+  if(id) E.forEach(e=>{ if(e.a===id)nb.add(e.b); if(e.b===id)nb.add(e.a); });
+  for(const {el:o,e} of edgeEls){ o.setAttribute('opacity', !id||e.a===id||e.b===id? .9 : .06); }
+  for(const {g,n} of nodeEls){ g.setAttribute('opacity', !id||nb.has(n.id)? 1 : .25); }
+}
+// zoom + pan
+let scale=1, ox=0, oy=0;
+const zoom = el('g',{},svg); zoom.append(gE, gN);
+function applyT(){ zoom.setAttribute('transform',`translate(${ox},${oy}) scale(${scale})`); }
+svg.addEventListener('wheel', ev=>{ ev.preventDefault(); const k = ev.deltaY<0?1.12:1/1.12; scale=Math.min(4,Math.max(.4,scale*k)); applyT(); },{passive:false});
+let pan=null;
+svg.addEventListener('pointerdown', ev=>{ pan={x:ev.clientX-ox,y:ev.clientY-oy}; svg.style.cursor='grabbing'; });
+addEventListener('pointerup', ()=>{ pan=null; svg.style.cursor='grab'; });
+svg.addEventListener('pointermove', ev=>{ if(pan){ ox=ev.clientX-pan.x; oy=ev.clientY-pan.y; applyT(); } });
+function toSvg(ev){ const r=svg.getBoundingClientRect(); const k=W/r.width;
+  return {x:((ev.clientX-r.left)*k-ox)/scale, y:((ev.clientY-r.top)*(H/r.height)-oy)/scale}; }
+// física
+let drag=null, alpha=1, tick=0, live=false;
+function heat(){ alpha=Math.max(alpha,.6); }
+function kick(){ if(!live){ live=true; requestAnimationFrame(step); } }
+function step(){
+  const cx=W/2, cy=H/2;
+  for(let i=0;i<N.length;i++) for(let j=i+1;j<N.length;j++){
+    const a=N[i],b=N[j]; let dx=a.x-b.x, dy=a.y-b.y, d2=dx*dx+dy*dy||1, d=Math.sqrt(d2);
+    const f=Math.min(9000/d2, 6)*alpha;
+    dx/=d; dy/=d; a.vx+=dx*f; a.vy+=dy*f; b.vx-=dx*f; b.vy-=dy*f;
+  }
+  const vis=E.filter(e=>document.getElementById('f-'+e.kind).checked);
+  for(const e of vis){
+    const a=byId[e.a], b=byId[e.b];
+    let dx=b.x-a.x, dy=b.y-a.y, d=Math.hypot(dx,dy)||1;
+    const L=170, f=(d-L)*0.012*alpha;
+    dx/=d; dy/=d; a.vx+=dx*f; a.vy+=dy*f; b.vx-=dx*f; b.vy-=dy*f;
+  }
+  for(const n of N){
+    n.vx+=(cx-n.x)*0.004*alpha; n.vy+=(cy-n.y)*0.004*alpha;
+    n.vx*=0.86; n.vy*=0.86;
+    if(drag===n && n.fx!=null){ n.x=n.fx; n.y=n.fy; n.vx=n.vy=0; }
+    else { n.x+=n.vx; n.y+=n.vy; }
+  }
+  alpha*=0.985; tick++;
+  draw();
+  if(alpha>0.004 && tick<3000) requestAnimationFrame(step); else live=false;
+}
+function draw(){
+  for(const {el:o,e} of edgeEls){
+    const A=byId[e.a], B=byId[e.b];
+    let x1=A.x,y1=A.y,x2=B.x,y2=B.y;
+    // acortar hasta el borde del círculo
+    const dx=x2-x1, dy=y2-y1, d=Math.hypot(dx,dy)||1;
+    x1+=dx/d*A.r; y1+=dy/d*A.r; x2-=dx/d*(B.r+7); y2-=dy/d*(B.r+7);
+    if(e.both){ const mx=(x1+x2)/2, my=(y1+y2)/2, nx=-(y2-y1)/d*22, ny=(x2-x1)/d*22;
+      o.setAttribute('d',`M${x1},${y1} Q${mx+nx},${my+ny} ${x2},${y2}`); }
+    else o.setAttribute('d',`M${x1},${y1} L${x2},${y2}`);
+  }
+  for(const {g,n} of nodeEls){ g.setAttribute('transform',`translate(${n.x},${n.y})`); }
+}
+for(const id of ['f-imp','f-calls','f-test','f-http','f-lab']) document.getElementById(id).onchange=()=>{ build(); heat(); tick=0; kick(); };
+document.getElementById('reset').onclick=()=>{ N.forEach((n,i)=>{ n.x=W/2+260*Math.cos(i/N.length*6.283); n.y=H/2+240*Math.sin(i/N.length*6.283); n.vx=n.vy=0; }); alpha=1; tick=0; kick(); };
+build(); kick();
+</script>
+</body></html>
