@@ -53,6 +53,13 @@ Shortcuts: `Ctrl+K` find pair · `Ctrl+Z/Y` undo/redo · `Del` delete ·
 Maps: ✓ = full coverage · ◐ = partial · · = empty. Autosave
 (session + disk), grey suggestions only for unique 1:1 shapes.
 
+## Screenshots
+
+| Mapping with real indices | Fan arcs per connection |
+|---|---|
+| ![Mapping glyphs with real indices](docs/capturas/01-mapeo-indices.png) | ![Fan arcs bridging both formulas](docs/capturas/02-arcos-abanico.png) |
+| Each badge is the exact `MathTex` subobject index. Marquee, free-glyph highlight and A\|B divider included. | One arc per connection, staggered above the formulas. Grey = unique-shape suggestion. |
+
 ## Bundle format
 
 ```json

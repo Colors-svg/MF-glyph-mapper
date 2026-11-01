@@ -52,6 +52,13 @@ Atajos: `Ctrl+K` buscar par · `Ctrl+Z/Y` deshacer/rehacer · `Supr` eliminar ·
 Mapas: ✓ = cobertura total · ◐ = parcial · · = vacío. Guardado automático
 (sesión + disco), sugerencias grises solo si la forma es única 1:1.
 
+## Capturas
+
+| Mapeo con índices reales | Arcos en abanico por conexión |
+|---|---|
+| ![Mapeo de glifos con índices reales](docs/capturas/01-mapeo-indices.png) | ![Arcos en abanico entre ambas fórmulas](docs/capturas/02-arcos-abanico.png) |
+| Cada insignia es el índice exacto del subobjeto `MathTex`. Con rectángulo de selección, resaltado de libres y divisoria A\|B. | Un arco por conexión, escalonado por encima de las fórmulas. Gris = sugerencia por forma única. |
+
 ## Formato del bundle
 
 ```json
