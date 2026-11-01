@@ -22,11 +22,12 @@ def post(path, obj, timeout=320):
 
 
 def test_parse_real():
-    r = post("/api/parse", {"path": r"D:\manim\ejercicios\cinetica_orden_cuatro.py"})
-    assert r["ok"] and len(r["transitions"]) == 17, (r.get("warnings"), len(r.get("transitions", [])))
+    demo = str(Path(__file__).resolve().parent.parent / "demo" / "escena_demo.py")
+    r = post("/api/parse", {"path": demo})
+    assert r["ok"] and len(r["transitions"]) == 3, (r.get("warnings"), len(r.get("transitions", [])))
     assert r["transitions"][0]["from_var"] == "eq1" and r["transitions"][0]["fase"].startswith("BLOQUE 1")
-    assert r["transitions"][0]["latex_a"].startswith("- \\frac")
-    print("parse API OK: 17 transiciones + latex inline")
+    assert r["transitions"][0]["latex_a"].startswith("x =")
+    print("parse API OK: demo 3 transiciones + latex inline")
 
 
 def test_render_validate_export():

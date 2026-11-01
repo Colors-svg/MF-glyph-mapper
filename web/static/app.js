@@ -29,6 +29,7 @@ function applyLang() {
   document.querySelectorAll("[data-i18n-label]").forEach(e => { e.setAttribute("data-label", T(e.dataset.i18nLabel)); });
   const lb = $("tb-lang");
   if (lb) { lb.textContent = S.lang === "es" ? "EN" : "ES"; lb.title = S.lang === "es" ? "Switch to English" : "Cambiar a español"; }
+  if ($("f-path") && !$("f-path").value) $("f-path").placeholder = T("fpath_ph");
   if ($("b-quick")) $("b-quick").textContent = S.quick ? T("quick_on") : T("quick_off");
   if ($("b-curves")) $("b-curves").textContent = S.hideConn ? T("curves_off") : T("curves_on");
   updateSuggBtn(); stepper(); refreshMarks(); redraw();
@@ -1069,7 +1070,8 @@ $("tb-lang").onclick = () => {
   applyLang();
 };
 applyLang();
-$("f-path").value = "D:\\manim\\ejercicios\\cinetica_orden_cuatro.py";
+$("f-path").value = "";
+$("f-path").placeholder = T("fpath_ph");
 stepper();
 /* Requisitos: la app abre igual sin ellos, pero avisa claro en vez de fallar raro. */
 (async () => {

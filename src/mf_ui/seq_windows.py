@@ -30,7 +30,7 @@ class SeqWindow(QMainWindow):
         root = QVBoxLayout(central)
         self.setAcceptDrops(True)
         pathrow = QHBoxLayout()
-        self.path_edit = QLineEdit(r"D:\manim\ejercicios\cinetica_orden_cuatro.py")
+        self.path_edit = QLineEdit()
         self.path_edit.setPlaceholderText("Pega la ruta del .py o arrastra el archivo aquí…")
         self.path_edit.setToolTip("Ruta directa: no usa el explorador de archivos")
         self.b_go = QPushButton("Cargar ruta")

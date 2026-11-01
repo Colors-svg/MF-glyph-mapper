@@ -37,7 +37,7 @@ Manim uses). No app dependencies: the server is pure stdlib.
 
 - **Desktop app (Windows):** double-click `iniciar.vbs`
 (or `app.bat` if you prefer watching the server console).
-- **Manual:** `python web/server.py` → open http://127.0.0.1:8765/
+- **Manual:** from the repo root, `python web/server.py` → open http://127.0.0.1:8765/
 - **No scene file at hand:** **Try demo** button (3-pair scene bundled in `demo/`).
 
 Flow: **1 Load** (.py with `TransformMatchingTex` or `TransformByGlyphMap` — literal

@@ -36,7 +36,7 @@ Sin dependencias de la app: el servidor es stdlib puro.
 
 - **App de escritorio (Windows):** doble clic en `iniciar.vbs`
 (o `app.bat` si prefieres ver la consola del servidor).
-- **Manual:** `python web/server.py` → abre http://127.0.0.1:8765/
+- **Manual:** desde la raíz del repo, `python web/server.py` → abre http://127.0.0.1:8765/
 - **Demo sin archivo propio:** botón **Probar demo** (escena de 3 pares incluida en `demo/`).
 
 Flujo: **1 Cargar** (.py con `TransformMatchingTex` o `TransformByGlyphMap` — las
