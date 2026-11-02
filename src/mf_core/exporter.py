@@ -4,20 +4,63 @@ import json
 from datetime import datetime
 
 
-def build_snippet(glyph_map: list[tuple[list[int], list[int]]],
-                  var_a: str = "mobA", var_b: str = "mobB",
-                  map_name: str = "glyph_map") -> str:
+def _fmt_entry(entry) -> str:
+    """([f],[t]) o ([f],[t],{"path_arc": x}) con path_arc compacto (k*PI si cuadra)."""
+    import math
+    f = sorted(entry[0]) if len(entry) > 0 else []
+    t = sorted(entry[1]) if len(entry) > 1 else []
+    if len(entry) > 2 and isinstance(entry[2], dict) and "path_arc" in entry[2]:
+        try:
+            v = float(entry[2]["path_arc"])
+        except Exception:
+            return f"    ({f}, {t}),"
+        # k*PI exacto cuando cuadra (2/3 PI, 1/2 PI...), si no numero corto
+        k = v / math.pi
+        for num, den in [(1, 1), (1, 2), (1, 3), (2, 3), (1, 4), (3, 4), (2, 1)]:
+            for sgn in (1, -1):
+                if abs(k - sgn * num / den) < 1e-9:
+                    ks = "" if (num == 1 and den == 1) else (f"{sgn * num}" if den == 1 else f"{sgn * num}/{den}")
+                    return f"    ({f}, {t}, {{\"path_arc\": {ks}*PI}}),"
+        return f"    ({f}, {t}, {{\"path_arc\": {v:.6g}}}),"
+    return f"    ({f}, {t}),"
+
+
+def _norm_entry(entry):
+    """Normaliza [f,t] o [f,t,opts] a (f, t, opts|None). Ignora basura con (None,)."""
+    if not isinstance(entry, (list, tuple)) or len(entry) < 2:
+        return None
+    try:
+        f = [int(x) for x in entry[0]]
+        t = [int(x) for x in entry[1]]
+    except Exception:
+        return None
+    opts = None
+    if len(entry) > 2 and isinstance(entry[2], dict) and "path_arc" in entry[2]:
+        try:
+            opts = {"path_arc": float(entry[2]["path_arc"])}
+        except Exception:
+            opts = None
+    return (f, t, opts)
+
+
+def build_snippet(glyph_map: list, var_a: str = "mobA",
+                  var_b: str = "mobB", map_name: str = "glyph_map") -> str:
     """Genera Python ejecutable: `TransformByGlyphMap(mobA, mobB, *glyph_map)`."""
     lines = [
         "# Generado por MF Glyph Mapper "
         + datetime.now().strftime("%Y-%m-%d %H:%M"),
         "# Requiere: Manim CE + MF_Tools (TransformByGlyphMap).",
+        "from manim import PI",
         "from MF_Tools import TransformByGlyphMap",
         "",
         f"{map_name} = [",
     ]
-    for f, t in glyph_map:
-        lines.append(f"    ({sorted(f)}, {sorted(t)}),")
+    for e in glyph_map:
+        n = _norm_entry(e)
+        if n is None:
+            continue
+        f, t, o = n
+        lines.append(_fmt_entry([f, t, {"path_arc": o["path_arc"]}] if o else [f, t]))
     lines += [
         "]",
         "",
@@ -28,17 +71,35 @@ def build_snippet(glyph_map: list[tuple[list[int], list[int]]],
 
 
 def build_project(latex_a: str, latex_b: str, path: list[int],
-                  n_from: int, n_to: int,
-                  glyph_map: list[tuple[list[int], list[int]]]) -> dict:
+                  n_from: int, n_to: int, glyph_map: list) -> dict:
+    conns = []
+    for e in glyph_map:
+        n = _norm_entry(e)
+        if n is None:
+            continue
+        f, t, o = n
+        c = {"from": list(f), "to": list(t)}
+        if o:
+            c["opts"] = {"path_arc": o["path_arc"]}
+        conns.append(c)
     return {"app": "mf-glyph-mapper", "version": 1,
             "latex_a": latex_a, "latex_b": latex_b, "path": list(path),
-            "n_from": n_from, "n_to": n_to,
-            "connections": [{"from": list(f), "to": list(t)} for f, t in glyph_map]}
+            "n_from": n_from, "n_to": n_to, "connections": conns}
 
 
-def project_to_glyph_map(project: dict) -> list[tuple[list[int], list[int]]]:
-    return [(list(c.get("from", [])), list(c.get("to", [])))
-            for c in project.get("connections", [])]
+def project_to_glyph_map(project: dict) -> list:
+    out = []
+    for c in project.get("connections", []):
+        f, t = list(c.get("from", [])), list(c.get("to", []))
+        o = c.get("opts")
+        if isinstance(o, dict) and "path_arc" in o:
+            try:
+                out.append((f, t, {"path_arc": float(o["path_arc"])}))
+                continue
+            except Exception:
+                pass
+        out.append((f, t))
+    return out
 
 
 def dumps_project(project: dict) -> str:
@@ -98,19 +159,25 @@ del bundle aplicada una sola vez.
 """
 
 
-def build_agent_bundle(maps: dict[str, list[tuple[list[int], list[int]]]],
-                       meta: dict[str, dict]) -> dict:
+def build_agent_bundle(maps: dict, meta: dict[str, dict]) -> dict:
     """Bundle V2 para el agente: claves = nombres reales del .py.
 
-    maps: {"eq1->eq2": [([0],[0]), ...]}.
+    maps: {"eq1->eq2": [([0],[0]), ([1],[0],{"path_arc": 1.57}), ...]}.
     meta: {"eq1->eq2": {"fase":..., "latex_a":..., "latex_b":...}}.
     """
     out = []
     for tid, gm in maps.items():
         m = meta.get(tid, {})
         a, b = tid.split("->", 1) if "->" in tid else (tid, "")
+        entries = []
+        for e in gm:
+            n = _norm_entry(e)
+            if n is None:
+                continue
+            f, t, o = n
+            entries.append([list(f), list(t), {"path_arc": o["path_arc"]}] if o else [list(f), list(t)])
         out.append({"id": tid, "from_var": a, "to_var": b,
                     "fase": m.get("fase", "Sin fase"),
                     "latex_a": m.get("latex_a", ""), "latex_b": m.get("latex_b", ""),
-                    "glyph_map": [[list(f), list(t)] for f, t in gm]})
+                    "glyph_map": entries})
     return {"app": "mf-glyph-mapper", "version": 2, "transitions": out}

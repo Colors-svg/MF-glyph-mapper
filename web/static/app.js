@@ -201,6 +201,47 @@ $("b-fit").onclick = fitView;
 $("t-badges").onchange = e => $("stage").classList.toggle("no-badge", !e.target.checked);
 
 function connKind(c) { return c.f.length && c.t.length ? "transform" : c.f.length ? "fade-out" : "fade-in"; }
+function connArc(c) { return (c && typeof c.arc === "number" && isFinite(c.arc)) ? c.arc : null; }
+function fmtArc(a) {
+  if (a === null || a === undefined) return "";
+  const k = a / Math.PI;
+  const r = Math.round(k * 100) / 100;
+  return (Object.is(r, -0) ? 0 : r) + "π";
+}
+function connExport(c) {
+  const f = [...c.f], t = [...c.t];
+  const a = connArc(c);
+  return a === null ? [f, t] : [f, t, {path_arc: a}];
+}
+function connFromSaved(e) {
+  const f = [...(e[0] || [])], t = [...(e[1] || [])];
+  let arc = null;
+  if (e.length > 2 && e[2] && typeof e[2].path_arc === "number" && isFinite(e[2].path_arc)) arc = e[2].path_arc;
+  const c = {f, t};
+  if (arc !== null) c.arc = arc;
+  return c;
+}
+function centroidOf(side, idx) {
+  try {
+    const m = S._map && S._map[side] && S._map[side][idx];
+    return m ? {x: m.x, y: m.y} : null;
+  } catch (e) { return null; }
+}
+function autoArcFor(c) {
+  if (!c.f.length || !c.t.length) return 0;
+  const ps = c.f.map(i => centroidOf("A", i)).filter(Boolean);
+  const qs = c.t.map(i => centroidOf("B", i)).filter(Boolean);
+  if (!ps.length || !qs.length) return Math.PI / 3;
+  const cxA = ps.reduce((s, p) => s + p.x, 0) / ps.length;
+  const cxB = qs.reduce((s, p) => s + p.x, 0) / qs.length;
+  const cyA = ps.reduce((s, p) => s + p.y, 0) / ps.length;
+  const cyB = qs.reduce((s, p) => s + p.y, 0) / qs.length;
+  const dx = cxB - cxA, dy = cyB - cyA;
+  if (Math.hypot(dx, dy) < 1e-6) return 0;
+  const vert = Math.abs(dy) > Math.abs(dx) * 2;
+  const mag = vert ? Math.PI / 2 : Math.PI / 3;
+  return (dx >= 0 ? 1 : -1) * mag;
+}
 function glyphConns(side, idx) {
   const out = [];
   S.conns.forEach((c, i) => {
@@ -518,7 +559,10 @@ function redraw() {
   const sel = [...S.selA].sort((a,b)=>a-b).map(i => "A"+i).concat([...S.selB].sort((a,b)=>a-b).map(i => "B"+i));
   $("selinfo").textContent = sel.length ? "sel=[" + sel.join(" ") + "]" : (S.lang === "es" ? "clic: selecciona · arrastre: rectángulo · Espacio+arrastrar: mover" : "click: select · drag: marquee · Space+drag: pan");
   $("gm-prev").textContent = S.conns.length
-    ? "glyph_map = [\n" + S.conns.map(c => `  ([${c.f}], [${c.t}]),  # ${connKind(c)}`).join("\n") + "\n]"
+    ? "glyph_map = [\n" + S.conns.map(c => {
+        const a = connArc(c);
+        return `  ([${c.f}], [${c.t}]${a !== null ? `, {"path_arc": ${fmtArc(a)}}` : ""}),  # ${connKind(c)}`;
+      }).join("\n") + "\n]"
     : (S.lang === "es"
       ? "glyph_map = [\n  # vacío: clic A → clic B conecta solo;\n  # Ctrl/Shift suma N→M y pulsa Conectar;\n  # o acepta las sugerencias grises.\n]"
       : "glyph_map = [\n  # empty: click A then click B auto-connects;\n  # Ctrl/Shift adds N→M then press Connect;\n  # or accept the grey suggestions.\n]");
@@ -528,7 +572,8 @@ function redraw() {
     const d = document.createElement("div");
     d.className = "tr" + (S._delIdx === i ? " cur" : "");
     d.style.borderLeft = `4px solid ${connColor(i)}`;
-    d.innerHTML = `<span class="badge">[${i}]</span><span>[${c.f}] → [${c.t}]</span><span class="hint">${connKind(c)}</span>`;
+    const a = connArc(c);
+    d.innerHTML = `<span class="badge">[${i}]</span><span>[${c.f}] → [${c.t}]${a !== null ? ` <b>⤴${fmtArc(a)}</b>` : ""}</span><span class="hint">${connKind(c)}</span>`;
     d.title = T("insp_row_title");
     d.onmouseenter = () => document.querySelectorAll("#stage path.conn").forEach(p => p.classList.toggle("hl", +p.dataset.c === i));
     d.onmouseleave = () => document.querySelectorAll("#stage path.conn.hl").forEach(p => p.classList.remove("hl"));
@@ -548,7 +593,30 @@ function redraw() {
 }
 function inspectConn(i) {
   const c = S.conns[i]; if (!c) return;
-  $("inspector").innerHTML = `<b style="color:${connColor(i)}">● ${T("insp_conn")} ${i} — ${connKind(c)}</b><br><code>[${c.f}] → [${c.t}]</code><br><span class="hint">${T("insp_del_hint")}</span>`;
+  const a = connArc(c);
+  const units = a === null ? "" : String(Math.round(a / Math.PI * 100) / 100);
+  $("inspector").innerHTML = `<b style="color:${connColor(i)}">● ${T("insp_conn")} ${i} — ${connKind(c)}</b><br><code>[${c.f}] → [${c.t}]</code><br>` +
+    `<label class="hint">${T("arc_label")} <input id="arc-in" type="text" inputmode="decimal" value="${units}" placeholder="0.5" style="width:64px" title="${T("arc_title")}"> π</label> ` +
+    `<button id="arc-set" title="${T("arc_title")}">${T("arc_set")}</button> ` +
+    `<button id="arc-auto" title="${T("arc_auto_title")}">${T("arc_auto")}</button> ` +
+    `<button id="arc-clear" title="${T("arc_clear_title")}">×</button><br><span class="hint">${T("insp_del_hint")}</span>`;
+  const commit = raw => {
+    snap();
+    const s = String(raw).trim().replace("π", "").replace("pi", "");
+    if (!s) { delete c.arc; }
+    else {
+      const k = Number(s);
+      if (!isFinite(k)) { toast(T("arc_bad"), 2500, true); return; }
+      if (Math.abs(k) > 4) { toast(T("arc_bad"), 2500, true); return; }
+      if (Math.abs(k) < 1e-9) delete c.arc;
+      else c.arc = k * Math.PI;
+    }
+    redraw(); autoSave(); inspectConn(i);
+  };
+  $("arc-set").onclick = () => commit($("arc-in").value);
+  $("arc-in").onkeydown = e => { if (e.key === "Enter") commit(e.target.value); e.stopPropagation(); };
+  $("arc-clear").onclick = () => { snap(); delete c.arc; redraw(); autoSave(); inspectConn(i); };
+  $("arc-auto").onclick = () => { snap(); const v = autoArcFor(c); if (Math.abs(v) < 1e-9) delete c.arc; else c.arc = v; redraw(); autoSave(); inspectConn(i); };
 }
 function inspectSel() {
   const all = [...S.selA].map(i => ["A", i]).concat([...S.selB].map(i => ["B", i]));
@@ -585,9 +653,9 @@ $("f-go").onclick = async () => {
     btn.disabled = false; return;
   }
   S.file = path; S.formulas = r.formulas; S.transitions = r.transitions; S.warnings = r.warnings; S.maps = {}; S.done = {}; S.pre = {}; S._preSeq = (S._preSeq || 0) + 1;
-  // Precarga del .py (TransformByGlyphMap + GLYPH_MAP_* literales). Manda el trabajo guardado si lo hay.
+  // Precarga del .py (TransformByGlyphMap + GLYPH_MAP_* literales, con path_arc). Manda el trabajo guardado si lo hay.
   const pre = r.prefill || {};
-  Object.entries(pre).forEach(([tid, gm]) => { S.maps[tid] = gm.map(([f, t]) => [[...f], [...t]]); });
+  Object.entries(pre).forEach(([tid, gm]) => { S.maps[tid] = gm.map(connFromSaved); });
   const nPre = Object.keys(pre).length;
   // Importar empieza LIMPIO salvo precarga. Si hay trabajo anterior, se ofrece recuperarlo (no en silencio).
   let hadPrev = false, nPrev = 0;
@@ -786,7 +854,7 @@ async function loadPair(i) {
   if (!b.ok) { S.gA = S.gB = null; S.conns = []; redraw(); $("m-info").textContent = (S.lang === "es" ? "ERROR final: " : "TARGET ERROR: ") + b.error; return; }
   S.gA = a; S.gB = b;
   const saved = S.maps[tid];
-  S.conns = saved ? saved.map(([f, t2]) => ({f: [...f], t: [...t2]})) : [];
+  S.conns = saved ? saved.map(connFromSaved) : [];
   computeDone(tid); computeSugg();
   $("m-info").textContent = `✓ ${a.resolved_len} vs ${b.resolved_len} ${T("glyphs_u")}` +
     (a.warnings.concat(b.warnings).length ? (S.lang === "es" ? " · AVISO ruta" : " · PATH warning") : "") + (saved ? (S.lang === "es" ? " · mapa restaurado" : " · map restored") : (S.lang === "es" ? " · par limpio, a mapear" : " · clean pair, map it"));
@@ -845,6 +913,29 @@ function addConn(f, t) {
   S.selA.clear(); S.selB.clear(); redraw(); stepper(); autoSave();
 }
 $("b-conn").onclick = () => addConn([...S.selA], [...S.selB]);
+(function addAutoArcsBtn() {
+  if ($("b-autoarc")) return;
+  const b = document.createElement("button");
+  b.id = "b-autoarc";
+  b.title = S.lang === "es"
+    ? "Auto-arcos: propone path_arc por dirección (editable por conexión)"
+    : "Auto-arcs: propose path_arc by direction (editable per connection)";
+  b.textContent = "Auto-arcs ⤴";
+  const ref = $("b-conn");
+  (ref && ref.parentNode ? ref.parentNode : ref).insertBefore(b, ref ? ref.nextSibling : null);
+  b.onclick = () => {
+    if (!S.conns.length) return toast(T("add_sel"), 2500, true);
+    snap();
+    S.conns.forEach(c => {
+      const v = autoArcFor(c);
+      if (Math.abs(v) < 1e-9) delete c.arc;
+      else c.arc = v;
+    });
+    redraw(); autoSave();
+    if (S._delIdx !== undefined) inspectConn(S._delIdx);
+    toast(S.lang === "es" ? "Auto-arcos aplicados (editables por conexión)." : "Auto-arcs applied (editable per connection).", 2500);
+  };
+})();
 $("b-sugg").onclick = () => acceptSugg();
 $("b-suggno").onclick = () => { S.sugg = []; updateSuggBtn(); redraw(); status(S.lang === "es" ? "Sugerencias descartadas: mapeo manual." : "Suggestions dismissed: manual mapping."); };
 $("b-quick").onclick = () => {
@@ -896,7 +987,7 @@ $("b-savemap").onclick = async () => {
     status(`${S.lang === "es" ? "Mapa" : "Map"} ${tid} ${S.lang === "es" ? "vaciado." : "emptied."}`);
     return;
   }
-  S.maps[tid] = S.conns.map(c => [[...c.f], [...c.t]]);
+  S.maps[tid] = S.conns.map(connExport);
   const cov = computeDone(tid);
   try { persistMaps(); } catch (e) {}
   refreshMarks();
@@ -936,14 +1027,14 @@ function autoSave() {
     refreshMarks();
     return;
   }
-  S.maps[tid] = S.conns.map(c => [[...c.f], [...c.t]]);
+  S.maps[tid] = S.conns.map(connExport);
   computeDone(tid);
   try { persistMaps(); } catch (e) {}
   refreshMarks();
 }
 function curVal() {
   return {n_from: S.gA ? S.gA.resolved_len : 0, n_to: S.gB ? S.gB.resolved_len : 0,
-    glyph_map: S.conns.map(c => [c.f, c.t]),
+    glyph_map: S.conns.map(connExport),
     top_from: S.gA ? S.gA.top_len : 1, top_to: S.gB ? S.gB.top_len : 1, stale: false};
 }
 
@@ -999,7 +1090,7 @@ function allIdx(side) {
 /* Paso 4 */
 let lastSnippet = "", lastBundle = null, lastAGENTE = "";
 $("e-snip").onclick = async () => {
-  const r = await api("/api/export", {mode: "snippet", glyph_map: S.conns.map(c => [c.f, c.t])});
+  const r = await api("/api/export", {mode: "snippet", glyph_map: S.conns.map(connExport)});
   lastSnippet = r.snippet || ""; $("snip").textContent = lastSnippet;
 };
 function dl(name, text, type = "text/plain") {
@@ -1036,7 +1127,7 @@ $("p-gen").onclick = async () => {
   let r;
   try {
     r = await api("/api/preview", {latex_a: S.latexA, latex_b: S.latexB,
-      glyph_map: S.conns.map(c => [c.f, c.t]), quality: "l"}, 320000);
+      glyph_map: S.conns.map(connExport), quality: "l"}, 320000);
   } catch (e) { $("p-info").textContent = T("server_down"); return; }
   if (!r.ok) { $("p-info").textContent = "ERROR: " + r.error; $("p-log").textContent = (r.log || "").slice(-1500); return; }
   const bust = "?t=" + Date.now();

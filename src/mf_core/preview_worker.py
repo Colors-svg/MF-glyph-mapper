@@ -44,8 +44,18 @@ def main() -> int:
     try:
         with tempfile.TemporaryDirectory(dir=str(root), prefix=".tmp_prev_") as tmp:
             scene = Path(tmp) / "prev_scene.py"
-            body = "\n".join(
-                f"        ({sorted(f)}, {sorted(t)})," for f, t in glyph_map)
+            rows = []
+            for e in glyph_map:
+                f = sorted(e[0]) if len(e) > 0 else []
+                t = sorted(e[1]) if len(e) > 1 else []
+                if len(e) > 2 and isinstance(e[2], dict) and "path_arc" in e[2]:
+                    try:
+                        rows.append(f"        ({f}, {t}, {{\"path_arc\": {float(e[2]['path_arc']):.6g}}}),")
+                        continue
+                    except Exception:
+                        pass
+                rows.append(f"        ({f}, {t}),")
+            body = "\n".join(rows)
             scene.write_text(
                 "from manim import *\nfrom MF_Tools import TransformByGlyphMap\n\n"
                 "class PrevScene(Scene):\n"

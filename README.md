@@ -42,9 +42,9 @@ Manim uses). No app dependencies: the server is pure stdlib.
 - **No scene file at hand:** **Try demo** button (3-pair scene bundled in `demo/`).
 
 Flow: **1 Load** (.py with `TransformMatchingTex`, `TransformByGlyphMap` or `ReplacementTransform` (migratable) — literal
-`GLYPH_MAP_*` lists are preloaded) →
+`GLYPH_MAP_*` lists are preloaded, per-entry `{"path_arc": …}` included) →
 **2 Map** (click A then click B to connect; Ctrl = individual, Shift = range,
-drag = marquee) → **3 Verify** (validator with the `transforms.py` rules) →
+drag = marquee; per-connection `path_arc` in π units + Auto-arcs) → **3 Verify** (validator with the `transforms.py` rules) →
 **4 Export** (snippet + `agent_bundle.json` + `AGENTE.md` for your Manim agent) →
 **5 Preview** (real mp4 + filmstrip frame).
 

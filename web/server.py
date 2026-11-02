@@ -46,6 +46,27 @@ _CODE_REV = _code_rev()
 _STARTED = __import__("time").strftime("%H:%M:%S")
 
 
+def _norm_gm(entries) -> list:
+    """Normaliza glyph_map del frontend: [f,t] o [f,t,{path_arc}] -> lista limpia."""
+    out = []
+    for e in entries or []:
+        if not isinstance(e, (list, tuple)) or len(e) < 2:
+            continue
+        try:
+            f = [int(x) for x in e[0]]
+            t = [int(x) for x in e[1]]
+        except Exception:
+            continue
+        if len(e) > 2 and isinstance(e[2], dict) and "path_arc" in e[2]:
+            try:
+                out.append([f, t, {"path_arc": float(e[2]["path_arc"])}])
+                continue
+            except Exception:
+                pass
+        out.append([f, t])
+    return out
+
+
 def _worker_env() -> dict:
     """Entorno de workers: PYTHONPATH con el shim anti-ventanas (Windows)."""
     import os
@@ -175,12 +196,12 @@ class Handler(BaseHTTPRequestHandler):
                     {"code": i.code, "level": i.level, "message": i.message,
                      "side": i.side, "indices": list(i.indices)}
                     for i in validate(req.get("n_from", 0), req.get("n_to", 0),
-                                       [(list(f), list(t)) for f, t in req.get("glyph_map", [])],
+                                       _norm_gm(req.get("glyph_map", [])),
                                        top_from=req.get("top_from", 1), top_to=req.get("top_to", 1),
                                        path=tuple(req.get("path", [0])), stale=req.get("stale", False))]})
             elif self.path == "/api/export":
                 mode = req.get("mode", "snippet")
-                gm = [(list(f), list(t)) for f, t in req.get("glyph_map", [])]
+                gm = _norm_gm(req.get("glyph_map", []))
                 if mode == "snippet":
                     self._send_json({"ok": True, "snippet": build_snippet(gm)})
                 elif mode == "project":
@@ -191,7 +212,7 @@ class Handler(BaseHTTPRequestHandler):
                 elif mode == "bundle":
                     maps = req.get("maps", {})
                     bundle = build_agent_bundle(
-                        {k: [(list(f), list(t)) for f, t in v] for k, v in maps.items()},
+                        {k: _norm_gm(v) for k, v in maps.items()},
                         req.get("meta", {}))
                     self._send_json({"ok": True, "bundle": bundle,
                                       "instructions": build_agent_instructions(bundle)})
@@ -200,7 +221,7 @@ class Handler(BaseHTTPRequestHandler):
             elif self.path == "/api/preview":
                 pay = _run_worker("preview_worker.py",
                                   {"latex_a": req.get("latex_a", ""), "latex_b": req.get("latex_b", ""),
-                                   "glyph_map": req.get("glyph_map", []),
+                                   "glyph_map": _norm_gm(req.get("glyph_map", [])),
                                    "quality": req.get("quality", "l")}, 300)
                 if pay.get("ok"):
                     pay["mp4"] = "/previews/" + Path(pay["mp4"]).name

@@ -115,6 +115,13 @@ es: {
   sel_cleared: "Selección limpiada.",
   insp_conn: "Conexión",
   insp_del_hint: "Marca y pulsa Eliminar para quitarla.",
+  arc_label: "path_arc:",
+  arc_title: "Curva por conexión, en unidades de π (0.5 = π/2). Vacío = sin curva.",
+  arc_set: "Fijar",
+  arc_auto: "Auto",
+  arc_auto_title: "Proponer arco por dirección origen→destino",
+  arc_clear_title: "Quitar curva",
+  arc_bad: "Arco inválido: usa número en unidades de π (-4…4).",
   repl_tag: "↯ Replacement · migrable",
 },
 en: {
@@ -232,6 +239,13 @@ en: {
   sel_cleared: "Selection cleared.",
   insp_conn: "Connection",
   insp_del_hint: "Mark and press Delete to remove it.",
+  arc_label: "path_arc:",
+  arc_title: "Per-connection curve, in π units (0.5 = π/2). Empty = no curve.",
+  arc_set: "Set",
+  arc_auto: "Auto",
+  arc_auto_title: "Propose arc by source→target direction",
+  arc_clear_title: "Remove curve",
+  arc_bad: "Invalid arc: use a number in π units (-4…4).",
   repl_tag: "↯ Replacement · migratable",
 }
 };

@@ -76,7 +76,7 @@ def _base_call(node: ast.AST) -> ast.Call | None:
 
 
 def _int_list(node: ast.AST) -> list[int] | None:
-    """[0, 1] literal o None. Sin literal_eval: tolera dicts de opciones al lado."""
+    """[0, 1] literal o None."""
     if not isinstance(node, (ast.List, ast.Tuple)):
         return None
     vals: list[int] = []
@@ -89,21 +89,107 @@ def _int_list(node: ast.AST) -> list[int] | None:
     return vals
 
 
+def _eval_number(node: ast.AST) -> float | None:
+    """Evalua numeros y expresiones tipo 2/3*PI, -PI/2, 1.57. Solo numeros y PI."""
+    import math
+    if isinstance(node, ast.Constant) and isinstance(node.value, (int, float)) \
+            and not isinstance(node.value, bool):
+        return float(node.value)
+    if isinstance(node, ast.Name) and node.id in ("PI", "pi"):
+        return math.pi
+    if isinstance(node, ast.UnaryOp) and isinstance(node.op, (ast.UAdd, ast.USub)):
+        v = _eval_number(node.operand)
+        if v is None:
+            return None
+        return v if isinstance(node.op, ast.UAdd) else -v
+    if isinstance(node, ast.BinOp) and isinstance(node.op, (ast.Add, ast.Sub, ast.Mult, ast.Div, ast.Pow)):
+        a, b = _eval_number(node.left), _eval_number(node.right)
+        if a is None or b is None:
+            return None
+        try:
+            if isinstance(node.op, ast.Add):
+                return a + b
+            if isinstance(node.op, ast.Sub):
+                return a - b
+            if isinstance(node.op, ast.Mult):
+                return a * b
+            if isinstance(node.op, ast.Div):
+                return a / b if b else None
+            return a ** b
+        except Exception:
+            return None
+    return None
+
+
+def _parse_opts(node: ast.AST) -> tuple[dict | None, bool]:
+    """{path_arc: ...} literal -> ({"path_arc": float} | None, unknown_flag)."""
+    if not isinstance(node, ast.Dict):
+        return None, True
+    out: dict = {}
+    unknown = False
+    for k, v in zip(node.keys, node.values):
+        ks = k.value if isinstance(k, ast.Constant) and isinstance(k.value, str) else None
+        if ks == "path_arc":
+            num = _eval_number(v)
+            if num is None:
+                return None, True
+            out["path_arc"] = num
+        elif ks is not None:
+            unknown = True  # otra opcion: se conserva f->t, se avisa
+        else:
+            unknown = True
+    if not out and unknown:
+        return None, True
+    if not out:
+        return None, False
+    return out, unknown
+
+
 def _as_glyph_map(node: ast.AST) -> tuple[list, bool] | None:
-    """[([f],[t]), ([f],[t],{opts}), ...] -> ([[[f],[t]], ..., hubo_opciones) o None."""
+    """[([f],[t]), ([f],[t],{path_arc}), ...] -> (entradas, hubo_no_soportado) o None.
+
+    Preserva path_arc numerico (incluye expresiones k*PI). Otras opciones o
+    valores no literales marcan hubo_no_soportado (aviso, f->t se conserva)."""
     if not isinstance(node, (ast.List, ast.Tuple)):
         return None
     out: list = []
-    had_opts = False
+    bad_opts = False
     for e in node.elts:
         if not isinstance(e, (ast.List, ast.Tuple)) or not 2 <= len(e.elts) <= 3:
             return None
         f, t = _int_list(e.elts[0]), _int_list(e.elts[1])
         if f is None or t is None:
             return None
-        out.append([f, t])
-        had_opts = had_opts or len(e.elts) == 3
-    return out, had_opts
+        if len(e.elts) == 3:
+            opts, unknown = _parse_opts(e.elts[2])
+            if opts:
+                out.append([f, t, opts])
+            else:
+                out.append([f, t])
+            bad_opts = bad_opts or unknown or opts is None
+        else:
+            out.append([f, t])
+    return out, bad_opts
+
+
+def _as_inline_entries(args: list[ast.AST]) -> list | None:
+    """Entradas inline de TransformByGlyphMap(a, b, ([f],[t],{...}), ...).
+
+    Retorna lista de entradas o None si no hay ninguna inline."""
+    out: list = []
+    found = False
+    for a in args:
+        if isinstance(a, (ast.List, ast.Tuple)) and 2 <= len(getattr(a, "elts", [])) <= 3:
+            elts = a.elts
+            f, t = _int_list(elts[0]), _int_list(elts[1])
+            if f is not None and t is not None:
+                found = True
+                if len(elts) == 3:
+                    opts, _ = _parse_opts(elts[2])
+                    out.append([f, t, opts] if opts else [f, t])
+                else:
+                    out.append([f, t])
+    return out if found else None
 
 
 def _call_name(node: ast.AST) -> str:
@@ -136,8 +222,8 @@ def parse_file(path: str) -> tuple[SequenceFile, list[str]]:
                     map_consts[node.targets[0].id] = gm[0]
                     if gm[1]:
                         sq.warnings.append(
-                            f"*{node.targets[0].id} (linea {node.lineno}): opciones por entrada "
-                            "(p. ej. path_arc) omitidas en precarga; el mapeo f->t se conserva.")
+                            f"*{node.targets[0].id} (linea {node.lineno}): opciones no soportadas "
+                            "ignoradas (solo path_arc numerico se precarga); el mapeo f->t se conserva.")
                 continue
             name = _call_name(base.func)
             if name in ("MathTex", "Tex"):
@@ -169,6 +255,13 @@ def parse_file(path: str) -> tuple[SequenceFile, list[str]]:
                 if mname and mname not in map_consts:
                     sq.warnings.append(
                         f"Par {t.from_var}->{t.to_var} (linea {t.line}): *{mname} no es lista literal, precarga omitida.")
+                elif not mname:
+                    # Entradas inline: ([f],[t]), ([f],[t],{"path_arc": ...}), ...
+                    inl = _as_inline_entries(list(node.args[2:]))
+                    if inl:
+                        key = f"{t.from_var}->{t.to_var}"
+                        if key not in sq.prefill:
+                            sq.prefill[key] = inl
         elif isinstance(node, ast.Call) and _call_name(node.func) == "ReplacementTransform":
             # Migrable: la escena reemplaza en bloque; la app permite mapearlo y exportar TBGMap.
             if len(node.args) >= 2 and all(isinstance(a, ast.Name) for a in node.args[:2]):

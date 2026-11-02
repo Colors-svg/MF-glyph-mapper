@@ -71,11 +71,49 @@ def test_tbgm() -> None:
     assert [(t.from_var, t.to_var) for t in sq.transitions] == [("a", "b"), ("b", "a"), ("a", "b")]
     assert sq.transitions[0].map_name == "MAP_OK"
     assert sq.transitions[2].map_name == ""
-    assert sq.prefill["a->b"] == [[[0], [0]], [[1, 2], [3]], [[4], []]]
+    assert sq.prefill["a->b"] == [[[0], [0]], [[1, 2], [3], {"path_arc": 1.57}], [[4], []]]
     assert "b->a" not in sq.prefill  # dinamico: transicion si, precarga no
     assert any("MAP_DIN" in w for w in sq.warnings)
-    assert any("opciones por entrada" in w for w in sq.warnings)
-    print("tbgm OK: ambos formatos, precarga literal, dinamico y opciones avisados")
+    assert not any("opciones por entrada" in w for w in sq.warnings)
+    print("tbgm OK: ambos formatos, precarga literal con path_arc, dinamico avisado")
+
+
+FIXTURE_TBGMINLINE = '''
+from manim import *
+from MF_Tools import TransformByGlyphMap
+import math
+
+class Demo(Scene):
+    def construct(self):
+        exp1 = MathTex("ax^2 + bx + c = 0")
+        exp2 = MathTex("x^2 = 1")
+        self.add(exp1)
+        self.wait()
+        self.play(TransformByGlyphMap(exp1, exp2,
+            ([0], [5], {"path_arc": 2/3*PI}),
+            ([0], [10], {"path_arc": 1/2*PI}),
+            ([], [4, 9]),
+            run_time=2
+        ))
+        self.wait()
+'''
+
+
+def test_tbgm_inline() -> None:
+    import math
+    with tempfile.NamedTemporaryFile("w", suffix=".py", delete=False, encoding="utf-8") as f:
+        f.write(FIXTURE_TBGMINLINE)
+        fp = f.name
+    sq, _ = parse_file(fp)
+    assert len(sq.transitions) == 1 and sq.transitions[0].kind == "tbgm"
+    gm = sq.prefill["exp1->exp2"]
+    assert gm[0][:2] == [[0], [5]] and abs(gm[0][2]["path_arc"] - 2 / 3 * math.pi) < 1e-9
+    assert abs(gm[1][2]["path_arc"] - math.pi / 2) < 1e-9
+    assert gm[2] == [[], [4, 9]]
+    from mf_core.exporter import build_snippet
+    sn = build_snippet(gm)
+    assert "path_arc" in sn and "PI" in sn
+    print("tbgm inline OK: path_arc 2/3PI y 1/2PI, fade [], export con PI")
 
 
 FIXTURE_REPL = '''
@@ -120,6 +158,7 @@ def test_bundle() -> None:
 if __name__ == "__main__":
     test_fixture()
     test_tbgm()
+    test_tbgm_inline()
     test_repl()
     test_bundle()
     print("ALL SEQ TESTS PASSED")
