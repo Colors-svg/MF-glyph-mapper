@@ -100,12 +100,15 @@ def _int_list(node: ast.AST) -> list[int] | None:
 
 
 def _eval_number(node: ast.AST) -> float | None:
-    """Evalua numeros y expresiones tipo 2/3*PI, -PI/2, 1.57. Solo numeros y PI."""
+    """Evalua numeros y expresiones tipo 2/3*PI, -PI/2, 1.57, np.pi. Solo numeros y PI."""
     import math
     if isinstance(node, ast.Constant) and isinstance(node.value, (int, float)) \
             and not isinstance(node.value, bool):
         return float(node.value)
     if isinstance(node, ast.Name) and node.id in ("PI", "pi"):
+        return math.pi
+    if isinstance(node, ast.Attribute) and node.attr in ("pi", "PI") \
+            and isinstance(node.value, ast.Name) and node.value.id in ("np", "numpy", "math"):
         return math.pi
     if isinstance(node, ast.UnaryOp) and isinstance(node.op, (ast.UAdd, ast.USub)):
         v = _eval_number(node.operand)
@@ -355,6 +358,38 @@ def _walk_no_for(node: ast.AST):
         yield from _walk_no_for(ch)
 
 
+def _copy_of(node: ast.AST, env: dict) -> tuple[str, int] | None:
+    """X = Y[i].copy() o el propio .copy() inline -> (Y, i)."""
+    if isinstance(node, ast.Name):
+        v = env.get(node.id)
+        if isinstance(v, tuple) and len(v) == 3 and v[0] == "__copy__":
+            return v[1], v[2]
+        return None
+    if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) \
+            and node.func.attr == "copy":
+        inner = node.func.value
+        if isinstance(inner, ast.Name):
+            return _copy_of(inner, env)
+        if isinstance(inner, ast.Subscript) and isinstance(inner.value, ast.Name):
+            sl = inner.slice
+            idx = sl.value if isinstance(sl, ast.Constant) else getattr(sl, "value", None)
+            if isinstance(idx, int) and not isinstance(idx, bool):
+                return inner.value.id, idx
+    return None
+
+
+def _subscript_of(node: ast.AST) -> tuple[str, int | None] | None:
+    """F2[1] -> ("F2", 1); Name suelto -> (var, None)."""
+    if isinstance(node, ast.Name):
+        return node.id, None
+    if isinstance(node, ast.Subscript) and isinstance(node.value, ast.Name):
+        sl = node.slice
+        idx = sl.value if isinstance(sl, ast.Constant) else getattr(sl, "value", None)
+        if isinstance(idx, int) and not isinstance(idx, bool):
+            return node.value.id, idx
+    return None
+
+
 def _process_transition_call(node: ast.Call, env: dict, sq: SequenceFile,
                              seen_tids: set[str]) -> None:
     name = _call_name(node.func)
@@ -390,6 +425,33 @@ def _process_transition_call(node: ast.Call, env: dict, sq: SequenceFile,
                         sq.prefill[key] = inl
     elif name == "ReplacementTransform":
         if len(node.args) >= 2:
+            # Carry con indice: ReplacementTransform(f1[1].copy(), f2[1], path_arc=...)
+            # o via temp (fly = f1[1].copy()). Se importa como par precargado.
+            cfrom = _copy_of(node.args[0], env)
+            cto = _subscript_of(node.args[1])
+            if cfrom is not None and cto is not None:
+                a, fi = cfrom
+                b, ti = cto
+                arc = None
+                for kw in node.keywords:
+                    if kw.arg == "path_arc":
+                        arc = _eval_number(kw.value)
+                if ti is None:
+                    _add_transition(sq, a, b, node.lineno, "", "repl",
+                                    _snapshot(env, a), _snapshot(env, b), seen_tids)
+                    return
+                entry = [[fi], [ti]]
+                if isinstance(arc, (int, float)):
+                    import math
+                    if abs(arc) <= 4 * math.pi:
+                        entry.append({"path_arc": float(arc)})
+                key = f"{a}->{b}"
+                sq.prefill.setdefault(key, [])
+                if entry not in sq.prefill[key]:
+                    sq.prefill[key].append(entry)
+                _add_transition(sq, a, b, node.lineno, "", "tbgm",
+                                _snapshot(env, a), _snapshot(env, b), seen_tids)
+                return
             a = _eval_name_or_none(node.args[0], env)
             b = _eval_name_or_none(node.args[1], env)
             if a and b:
@@ -451,6 +513,13 @@ def _process_block(stmts: list[ast.stmt], env: dict, sq: SequenceFile,
         if isinstance(st, ast.Assign) and len(st.targets) == 1 \
                 and isinstance(st.targets[0], ast.Name):
             var = st.targets[0].id
+            cp = _copy_of(st.value, env)
+            if cp is not None and not (isinstance(st.value, ast.Call)
+                                       and isinstance(st.value.func, ast.Name)):
+                # X = Y[i].copy() (o .copy() anidado): liga temporal de carry,
+                # no es formula; el par real lo crea el ReplacementTransform.
+                env[var] = ("__copy__", cp[0], cp[1])
+                continue
             is_tex, args = _formula_from_value(st.value, env)
             if is_tex:
                 if args is None:

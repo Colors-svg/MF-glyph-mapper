@@ -186,6 +186,35 @@ def test_locals() -> None:
     print("locals OK: consts, starred, subscript, wrapper, loop+if, snapshots")
 
 
+def test_carry() -> None:
+    src = (
+        "from manim import *\n"
+        "import numpy as np\n"
+        "class D(Scene):\n"
+        "    def construct(self):\n"
+        "        f1 = MathTex(r\"a\", r\"B\", r\"c\")\n"
+        "        f2 = MathTex(r\"a(\", r\"K\", r\"c)\")\n"
+        "        fly = f1[1].copy()\n"
+        "        self.play(ReplacementTransform(fly, f2[1], path_arc=-np.pi / 3))\n"
+        "        self.play(ReplacementTransform(f1[0].copy(), f2[0]))\n"
+        "        self.play(ReplacementTransform(f1, f2, run_time=1.0))\n"
+    )
+    with tempfile.NamedTemporaryFile("w", suffix=".py", delete=False, encoding="utf-8") as f:
+        f.write(src)
+        fp = f.name
+    sq, _ = parse_file(fp)
+    tids = [(t.from_var, t.to_var, t.kind) for t in sq.transitions]
+    assert ("f1", "f2", "tbgm") in tids, tids  # carry con indice precargado
+    assert ("f1", "f2", "repl") in tids, tids  # Replacement pleno intacto
+    pre = sq.prefill["f1->f2"]
+    assert [[1], [1]] == pre[0][:2], pre
+    import math
+    assert abs(pre[0][2]["path_arc"] + math.pi / 3) < 1e-9, pre
+    assert [[0], [0]] == [x for x in pre[1][:2]], pre  # copy inline sin path_arc
+    assert not any("sin MathTex" in w for w in sq.warnings), sq.warnings
+    print("carry OK: f1[1].copy()->f2[1] precarga con path_arc np.pi, repl intacto")
+
+
 def test_demo_real() -> None:
     from pathlib import Path as _P
     demo = _P(r"D:\\manim\\escenas\\demo_tobin_premium.py")
@@ -194,9 +223,16 @@ def test_demo_real() -> None:
         return
     sq, _ = parse_file(str(demo))
     tids = sorted(f"{t.from_var}->{t.to_var}" for t in sq.transitions)
-    assert tids == ["f2->f4", "f6->f7", "f8->fx", "f9->fx"], tids
+    assert tids == ["f1->f2", "f2->f4", "f5->f6", "f6->f7", "f7->f8",
+                    "f8->fx", "f9->fx"], tids
     assert len(sq.formulas) >= 10, len(sq.formulas)
     assert not any("sin MathTex" in w for w in sq.warnings), sq.warnings
+    import math as _m
+    pre = sq.prefill
+    assert pre["f1->f2"][0][:2] == [[1], [1]]
+    assert abs(pre["f1->f2"][0][2]["path_arc"] + _m.pi / 3) < 1e-9
+    assert abs(pre["f5->f6"][0][2]["path_arc"] - _m.pi / 3) < 1e-9
+    assert abs(pre["f7->f8"][0][2]["path_arc"] + _m.pi / 4) < 1e-9
     print(f"demo real OK: {len(sq.formulas)} formulas, {tids}")
 
 
@@ -221,6 +257,7 @@ if __name__ == "__main__":
     test_tbgm_inline()
     test_repl()
     test_locals()
+    test_carry()
     test_demo_real()
     test_bundle()
     print("ALL SEQ TESTS PASSED")
