@@ -1206,6 +1206,22 @@ $("e-bundle").onclick = async () => {
 };
 $("e-bdl").onclick = () => lastBundle ? dl("agent_bundle.json", JSON.stringify(lastBundle, null, 2), "application/json") : toast(T("bundle_first"), 3000, true);
 $("e-adl").onclick = () => lastAGENTE ? dl("AGENTE.md", lastAGENTE) : toast(T("bundle_first"), 3000, true);
+let lastGlob = "";
+$("e-glob").onclick = async () => {
+  const meta = {};
+  S.transitions.forEach(t => {
+    const tid = `${t.from_var}->${t.to_var}`;
+    if (S.maps[tid]) meta[tid] = {fase: t.fase, latex_a: t.latex_a, latex_b: t.latex_b};
+  });
+  if (!Object.keys(S.maps).length) { $("glob").textContent = ""; return toast(T("no_maps"), 3000, true); }
+  let r;
+  try { r = await api("/api/export", {mode: "scene", maps: S.maps, meta}); }
+  catch (e) { toast(T("server_down"), 3000, true); return; }
+  lastGlob = (r && r.python) || "";
+  $("glob").textContent = lastGlob;
+  if (lastGlob) toast(`${S.lang === "es" ? "Mapa global listo" : "Global map ready"}: <b>${Object.keys(S.maps).length}</b> ${T("trans_u")}.`);
+};
+$("e-globdl").onclick = () => lastGlob ? dl("all_glyph_maps.py", lastGlob) : toast(T("glob_first"), 3000, true);
 
 /* Paso 5 */
 $("p-gen").onclick = async () => {

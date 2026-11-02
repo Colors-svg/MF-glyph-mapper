@@ -159,6 +159,58 @@ del bundle aplicada una sola vez.
 """
 
 
+def _const_name(tid: str, seen: set[str]) -> str:
+    """Nombre de constante valido y unico para un id 'a->b'."""
+    import re
+    base = "GLYPH_MAP_" + re.sub(r"\W+", "_", tid).strip("_").upper()[:60]
+    name, k = base or "GLYPH_MAP_X", 2
+    while name in seen:
+        name, k = f"{base}_{k}", k + 1
+    seen.add(name)
+    return name
+
+
+def build_global_maps(maps: dict, meta: dict[str, dict]) -> str:
+    """Genera un .py funcional simple con TODOS los mapas: una constante por par.
+
+    Lenguaje de siempre: `TransformByGlyphMap(a, b, *GLYPH_MAP_...)` listo para pegar.
+    """
+    import math
+    lines = [
+        "# Generado por MF Glyph Mapper "
+        + datetime.now().strftime("%Y-%m-%d %H:%M"),
+        "# Todos los mapas en el lenguaje de siempre: pega las constantes y los plays",
+        "# en tu escena. Requiere: Manim CE + MF_Tools (TransformByGlyphMap).",
+        "from manim import PI",
+        "from MF_Tools import TransformByGlyphMap",
+        "",
+    ]
+    if not maps:
+        lines.append("# (sin mapas guardados)")
+        return "\n".join(lines) + "\n"
+    seen: set[str] = set()
+    for tid in sorted(maps):
+        entries = []
+        for e in maps[tid]:
+            n = _norm_entry(e)
+            if n is not None:
+                entries.append(n)
+        if not entries:
+            continue
+        m = meta.get(tid, {})
+        a, b = tid.split("->", 1) if "->" in tid else (tid, "")
+        name = _const_name(tid, seen)
+        fase = m.get("fase", "")
+        lines.append(f"# ---- {tid}" + (f"  ({fase})" if fase else ""))
+        lines.append(f"{name} = [")
+        for f, t, o in entries:
+            lines.append("    " + _fmt_entry([f, t, {"path_arc": o["path_arc"]}] if o else [f, t]).strip())
+        lines.append("]")
+        lines.append(f"# self.play(TransformByGlyphMap({a}, {b}, *{name}))")
+        lines.append("")
+    return "\n".join(lines)
+
+
 def build_agent_bundle(maps: dict, meta: dict[str, dict]) -> dict:
     """Bundle V2 para el agente: claves = nombres reales del .py.
 

@@ -64,7 +64,9 @@ def main() -> int:
                 "boton sugerencias": pg.evaluate("!!document.getElementById('b-sugg')"),
                 "21 botones mapa": pg.evaluate(
                     "['b-quick','b-conn','b-curves','b-fout','b-fin','b-del','b-undo','b-redo',"
-                    "'b-clear','b-savemap','b-sugg','b-suggno'].every(id=>!!document.getElementById(id))"),
+                    "'b-clear','b-savemap','b-sugg','b-suggno','e-snip','e-snipdl','e-bundle',"
+                    "'e-bdl','e-adl','e-glob','e-globdl','b-autoarc','b-learnclear']"
+                    ".every(id=>!!document.getElementById(id))"),
             }
             for k, v in checks.items():
                 gate(f"humo: {k}", bool(v))

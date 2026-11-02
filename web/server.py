@@ -101,6 +101,7 @@ from mf_core.seq_extract import parse_file  # noqa: E402
 from mf_core.validator import validate  # noqa: E402
 from mf_core.exporter import (  # noqa: E402
     build_snippet, build_project, build_agent_bundle, build_agent_instructions,
+    build_global_maps,
 )
 
 WEB = Path(__file__).resolve().parent
@@ -294,6 +295,11 @@ class Handler(BaseHTTPRequestHandler):
                         req.get("meta", {}))
                     self._send_json({"ok": True, "bundle": bundle,
                                       "instructions": build_agent_instructions(bundle)})
+                elif mode == "scene":
+                    maps = req.get("maps", {})
+                    self._send_json({"ok": True, "python": build_global_maps(
+                        {k: _norm_gm(v) for k, v in maps.items()},
+                        req.get("meta", {}))})
                 else:
                     self._send_json({"ok": False, "error": f"mode {mode}?"}, 400)
             elif self.path == "/api/learn":
