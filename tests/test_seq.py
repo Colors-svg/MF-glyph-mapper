@@ -227,6 +227,8 @@ def test_demo_real() -> None:
                     "f8->fx", "f9->fx"], tids
     assert len(sq.formulas) >= 10, len(sq.formulas)
     assert not any("sin MathTex" in w for w in sq.warnings), sq.warnings
+    assert any("l1" in w and "l2" in w and "Sin transicion" in w
+               for w in sq.warnings), sq.warnings
     import math as _m
     pre = sq.prefill
     assert pre["f1->f2"][0][:2] == [[1], [1]]

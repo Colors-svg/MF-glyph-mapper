@@ -648,6 +648,15 @@ def parse_file(path: str) -> tuple[SequenceFile, list[str]]:
             if not _warn_unknown(sq, t, known):
                 kept.append(t)
         sq.transitions = kept
+        # contexto: formulas que se muestran pero en ninguna transicion
+        # (intersticiales como F3, etiquetas de ejes). Informativo, no error.
+        usados = {t.from_var for t in sq.transitions} | {t.to_var for t in sq.transitions}
+        huerfanas = sorted({f.var for f in sq.formulas} - usados)
+        if huerfanas:
+            sq.warnings.append(
+                "Sin transicion (solo se muestran, nada que mapear): "
+                + ", ".join(huerfanas)
+                + ". Si alguna debia mapearse, añade un Transform* que la use.")
         if any(t.kind == "repl" for t in sq.transitions):
             sq.warnings.append(
                 "Hay pares con ReplacementTransform: se importan como migrables; "
