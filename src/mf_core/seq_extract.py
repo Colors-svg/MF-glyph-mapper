@@ -1,8 +1,16 @@
-"""Fase 7 (V2.0): extraccion estatica de .py con AST. Sin ejecutar la escena.
+# -*- coding: utf-8 -*-
+"""Fase 7 (V2.x): extraccion estatica de .py con AST. Sin ejecutar la escena.
 
 Extrae: formulas MathTex/Tex (variable -> literales), pares de
-TransformMatchingTex(a, b) y TransformByGlyphMap(a, b, *MAPA, ...),
-fases desde comentarios BLOQUE y precarga de mapas literales GLYPH_MAP_*.
+TransformMatchingTex(a, b), TransformByGlyphMap(a, b, *MAPA, ...) y
+ReplacementTransform(a, b) migrables, fases desde comentarios BLOQUE y
+precarga de mapas literales GLYPH_MAP_*.
+
+V2.1 (constantes y locales): ademas resuelve constantes de modulo
+(`K = "..."`, `M = ["...", ...]`, concatenacion con `+`), llamadas
+envueltas (`pintar_partes(MathTex(...))`), `*MAPA`, subindices (`M[0]`),
+asignaciones en locales de metodos y bucles `for` sobre tuplas literales
+(con `if` evaluable e IfExp) con snapshot del latex por transicion.
 """
 from __future__ import annotations
 import ast
@@ -28,6 +36,8 @@ class Transition:
     line: int
     map_name: str = ""  # *GLYPH_MAP_X si viene de TransformByGlyphMap
     kind: str = "tmt"  # tmt | tbgm | repl (ReplacementTransform migrable)
+    latex_a: str = ""  # snapshot del latex en ese punto ("" = ver by_var)
+    latex_b: str = ""
 
 
 @dataclass
@@ -200,6 +210,322 @@ def _call_name(node: ast.AST) -> str:
     return ""
 
 
+# ---------------------------------------------------------------------------
+# V2.1: constantes, locales y bucles (todo estatico, sin ejecutar)
+# ---------------------------------------------------------------------------
+
+def _eval_str_const(node: ast.AST, env: dict) -> str | list[str] | None:
+    """Constante de cadena: "lit", [lit, ...], NAME (ya resuelto) o "a"+B."""
+    if isinstance(node, ast.Constant) and isinstance(node.value, str):
+        return node.value
+    if isinstance(node, (ast.List, ast.Tuple)):
+        out = []
+        for x in node.elts:
+            v = _eval_str_const(x, env)
+            if not isinstance(v, str):
+                return None
+            out.append(v)
+        return out
+    if isinstance(node, ast.Name):
+        v = env.get(node.id)
+        return v if isinstance(v, (str, list)) else None
+    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
+        a, b = _eval_str_const(node.left, env), _eval_str_const(node.right, env)
+        if isinstance(a, str) and isinstance(b, str):
+            return a + b
+        return None
+    return None
+
+
+def _collect_consts(tree: ast.AST) -> dict:
+    """NAME -> str | [str] para literales de modulo (con punto fijo)."""
+    cands: dict[str, ast.AST] = {}
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Assign) and len(node.targets) == 1 \
+                and isinstance(node.targets[0], ast.Name):
+            cands[node.targets[0].id] = node.value
+    env: dict = {}
+    for _ in range(10):
+        changed = False
+        for k, v in cands.items():
+            if k in env:
+                continue
+            r = _eval_str_const(v, env)
+            if r is not None:
+                env[k] = r
+                changed = True
+        if not changed:
+            break
+    return env
+
+
+def _resolve_arg(node: ast.AST, env: dict) -> list[str] | None:
+    """Un argumento de MathTex -> lista de literales, o None si dinamico."""
+    if isinstance(node, ast.Starred):
+        return _resolve_arg(node.value, env)
+    if isinstance(node, ast.Constant) and isinstance(node.value, str):
+        return [node.value]
+    if isinstance(node, ast.Name):
+        v = env.get(node.id)
+        if isinstance(v, str):
+            return [v]
+        if isinstance(v, list) and all(isinstance(x, str) for x in v):
+            return list(v)
+        return None
+    if isinstance(node, ast.Subscript):
+        base = node.value
+        sl = node.slice
+        if isinstance(base, ast.Name):
+            v = env.get(base.id)
+            idx = sl.value if isinstance(sl, ast.Constant) else getattr(sl, "value", None)
+            if isinstance(v, list) and isinstance(idx, int) and not isinstance(idx, bool) \
+                    and -len(v) <= idx < len(v):
+                return [v[idx]]
+        return None
+    return None
+
+
+def _formula_from_value(value: ast.AST, env: dict) -> tuple[bool, list[str] | None]:
+    """(es_tex, args | None). Desenvuelve pintar_partes(MathTex(...))."""
+    v = value
+    while isinstance(v, ast.Call) and isinstance(v.func, ast.Name) \
+            and v.func.id not in ("MathTex", "Tex") \
+            and len(v.args) >= 1 and isinstance(v.args[0], ast.Call):
+        v = v.args[0]
+    v = _base_call(v)
+    if v is None or _call_name(v.func) not in ("MathTex", "Tex"):
+        return False, None
+    args: list[str] = []
+    for a in v.args:
+        r = _resolve_arg(a, env)
+        if r is None:
+            return True, None
+        args.extend(r)
+    return True, args
+
+
+def _eval_test(test: ast.AST, env: dict):
+    """Condicion estatica (==, != sobre str/int/bool) -> True/False/None."""
+    if isinstance(test, ast.Compare) and len(test.ops) == 1 and len(test.comparators) == 1:
+        op = test.ops[0]
+        if not isinstance(op, (ast.Eq, ast.NotEq)):
+            return None
+        vals = []
+        for n in (test.left, test.comparators[0]):
+            if isinstance(n, ast.Constant) and isinstance(n.value, (str, int, float, bool)):
+                vals.append(n.value)
+            elif isinstance(n, ast.Name) and isinstance(env.get(n.id), (str, int, float, bool)):
+                vals.append(env[n.id])
+            else:
+                return None
+        eq = vals[0] == vals[1]
+        return eq if isinstance(op, ast.Eq) else not eq
+    if isinstance(test, ast.Constant) and isinstance(test.value, bool):
+        return test.value
+    return None
+
+
+def _eval_name_or_none(node: ast.AST, env: dict):
+    """IfExp/Name de transicion -> nombre de variable o None."""
+    if isinstance(node, ast.Name):
+        return node.id
+    if isinstance(node, ast.IfExp):
+        c = _eval_test(node.test, env)
+        if c is None:
+            return None
+        return _eval_name_or_none(node.body if c else node.orelse, env)
+    return None
+
+
+def _snapshot(env: dict, var: str) -> str:
+    v = env.get(var)
+    if isinstance(v, str):
+        return v
+    if isinstance(v, list) and all(isinstance(x, str) for x in v):
+        return " ".join(v)
+    return ""
+
+
+def _walk_no_for(node: ast.AST):
+    """Yield node y descendientes sin entrar en bucles for (ya desenrollados)."""
+    yield node
+    for ch in ast.iter_child_nodes(node):
+        if isinstance(ch, ast.For):
+            continue
+        yield from _walk_no_for(ch)
+
+
+def _process_transition_call(node: ast.Call, env: dict, sq: SequenceFile,
+                             seen_tids: set[str]) -> None:
+    name = _call_name(node.func)
+    if name == "TransformMatchingTex":
+        if len(node.args) >= 2:
+            a = _eval_name_or_none(node.args[0], env)
+            b = _eval_name_or_none(node.args[1], env)
+            if a and b:
+                _add_transition(sq, a, b, node.lineno, "", "tmt",
+                                _snapshot(env, a), _snapshot(env, b), seen_tids)
+    elif name == "TransformByGlyphMap":
+        if len(node.args) >= 2:
+            a = _eval_name_or_none(node.args[0], env)
+            b = _eval_name_or_none(node.args[1], env)
+            if not (a and b):
+                return
+            mname = ""
+            for x in node.args[2:]:
+                if isinstance(x, ast.Starred) and isinstance(x.value, ast.Name):
+                    mname = x.value.id
+                    break
+            t_kind = "tbgm"
+            _add_transition(sq, a, b, node.lineno, mname, t_kind,
+                            _snapshot(env, a), _snapshot(env, b), seen_tids)
+            if mname and mname not in _MAP_CONSTS.get(id(sq), set()):
+                sq.warnings.append(
+                    f"Par {a}->{b} (linea {node.lineno}): *{mname} no es lista literal, precarga omitida.")
+            elif not mname:
+                inl = _as_inline_entries(list(node.args[2:]))
+                if inl:
+                    key = f"{a}->{b}"
+                    if key not in sq.prefill:
+                        sq.prefill[key] = inl
+    elif name == "ReplacementTransform":
+        if len(node.args) >= 2:
+            a = _eval_name_or_none(node.args[0], env)
+            b = _eval_name_or_none(node.args[1], env)
+            if a and b:
+                _add_transition(sq, a, b, node.lineno, "", "repl",
+                                _snapshot(env, a), _snapshot(env, b), seen_tids)
+
+
+_MAP_CONSTS: dict[int, set] = {}
+
+
+def _add_transition(sq: SequenceFile, a: str, b: str, line: int, mname: str,
+                    kind: str, la: str, lb: str, seen: set[str]) -> None:
+    tid = f"{a}->{b}"
+    if tid in seen:
+        i = 2
+        while f"{tid}#{i}" in seen:
+            i += 1
+        tid = f"{tid}#{i}"
+    seen.add(tid)
+    # el tid publico conserva from/to (el sufijo solo desempata duplicados)
+    t = Transition(a, b, line, mname, kind, la, lb)
+    t.tid = tid  # type: ignore[attr-defined]
+    sq.transitions.append(t)
+
+
+def _unroll_for(node: ast.For, env: dict):
+    """for a, b in ((..), (..)): -> lista de dicts de ligaduras o None."""
+    tgt = node.target
+    if not isinstance(tgt, (ast.Tuple, ast.List)):
+        return None
+    names = [e.id for e in tgt.elts if isinstance(e, ast.Name)]
+    if len(names) != len(tgt.elts):
+        return None
+    if not isinstance(node.iter, (ast.Tuple, ast.List)):
+        return None
+    rows = []
+    for elt in node.iter.elts:
+        if isinstance(elt, (ast.Tuple, ast.List)) and len(elt.elts) == len(names):
+            row = {}
+            ok = True
+            for n, v in zip(names, elt.elts):
+                if isinstance(v, ast.Constant) and isinstance(v.value, (str, int, float, bool)):
+                    row[n] = v.value
+                elif isinstance(v, ast.Name):
+                    row[n] = ("__name__", v.id)
+                else:
+                    ok = False
+                    break
+            if ok:
+                rows.append(row)
+                continue
+        return None
+    return rows
+
+
+def _process_block(stmts: list[ast.stmt], env: dict, sq: SequenceFile,
+                   seen_tids: set[str]) -> None:
+    for st in stmts:
+        if isinstance(st, ast.Assign) and len(st.targets) == 1 \
+                and isinstance(st.targets[0], ast.Name):
+            var = st.targets[0].id
+            is_tex, args = _formula_from_value(st.value, env)
+            if is_tex:
+                if args is None:
+                    sq.formulas.append(Formula(var, "MathTex", [], st.lineno, True))
+                    sq.warnings.append(
+                        f"{var} (linea {st.lineno}): arg no literal, se omite valor.")
+                    env[var] = None
+                else:
+                    sq.formulas.append(Formula(var, "MathTex", args, st.lineno, False))
+                    env[var] = list(args)
+            elif isinstance(st.value, ast.Name) and st.value.id in env:
+                v = env[st.value.id]  # alias: f9 = fx propaga el latex vigente
+                if isinstance(v, str):
+                    sq.formulas.append(Formula(var, "MathTex", [v], st.lineno, False))
+                    env[var] = v
+                elif isinstance(v, list) and all(isinstance(x, str) for x in v):
+                    sq.formulas.append(Formula(var, "MathTex", list(v), st.lineno, False))
+                    env[var] = list(v)
+                else:
+                    sq.formulas.append(Formula(var, "MathTex", [], st.lineno, True))
+                    env[var] = None
+            # no-tex: se ignora en silencio (copias .copy(), VGroup, badges...)
+        elif isinstance(st, ast.For):
+            rows = _unroll_for(st, env)
+            if rows is None:
+                # bucle no estatico: mejor esfuerzo sin snapshots
+                for sub in _walk_no_for(st):
+                    if isinstance(sub, ast.Call):
+                        _process_transition_call(sub, env, sq, seen_tids)
+                for sub in ast.walk(st):
+                    if isinstance(sub, ast.Assign) and len(sub.targets) == 1 \
+                            and isinstance(sub.targets[0], ast.Name):
+                        is_tex, args = _formula_from_value(sub.value, env)
+                        if is_tex:
+                            if args is None:
+                                sq.formulas.append(
+                                    Formula(sub.targets[0].id, "MathTex", [], sub.lineno, True))
+                                env[sub.targets[0].id] = None
+                            else:
+                                sq.formulas.append(
+                                    Formula(sub.targets[0].id, "MathTex", args, sub.lineno, False))
+                                env[sub.targets[0].id] = list(args)
+                continue
+            for row in rows:
+                local = dict(env)
+                for k, v in row.items():
+                    if isinstance(v, tuple) and v[0] == "__name__":
+                        # liga al VALOR de la constante homonima si existe
+                        local[k] = env.get(v[1], ("__name__", v[1]))
+                    else:
+                        local[k] = v
+                _process_block(st.body, local, sq, seen_tids)
+                # propaga asignaciones simples de vuelta (fx, f9, ...)
+                for k, v in local.items():
+                    if k not in env or env.get(k) != v:
+                        if isinstance(v, (str, list)) or v is None:
+                            env[k] = v
+        elif isinstance(st, ast.If):
+            c = _eval_test(st.test, env)
+            if c is True:
+                _process_block(st.body, env, sq, seen_tids)
+            elif c is False:
+                _process_block(st.orelse, env, sq, seen_tids)
+            else:
+                a, b = dict(env), dict(env)
+                _process_block(st.body, a, sq, seen_tids)
+                _process_block(st.orelse, b, sq, seen_tids)
+                for k in set(a) | set(b):
+                    env[k] = a.get(k) if a.get(k) == b.get(k) else None
+        else:
+            for sub in _walk_no_for(st):
+                if isinstance(sub, ast.Call):
+                    _process_transition_call(sub, env, sq, seen_tids)
+
+
 def parse_file(path: str) -> tuple[SequenceFile, list[str]]:
     """Retorna (SequenceFile, source_lines). Solo lee, nunca ejecuta."""
     src = open(path, encoding="utf-8").read()
@@ -210,76 +536,55 @@ def parse_file(path: str) -> tuple[SequenceFile, list[str]]:
         sq = SequenceFile(path=path, warnings=[f"Sintaxis invalida: {e}"])
         return sq, lines
     sq = SequenceFile(path=path)
-    # Pasada 1: formulas + constantes de mapa (orden en archivo irrelevante).
+    consts = _collect_consts(tree)
+    # Pasada 1: mapas literales GLYPH_MAP_* (orden irrelevante).
     map_consts: dict[str, list] = {}
     for node in ast.walk(tree):
         if isinstance(node, ast.Assign) and len(node.targets) == 1 \
                 and isinstance(node.targets[0], ast.Name):
-            base = _base_call(node.value)
-            if base is None:
-                gm = _as_glyph_map(node.value)
-                if gm is not None:
-                    map_consts[node.targets[0].id] = gm[0]
-                    if gm[1]:
-                        sq.warnings.append(
-                            f"*{node.targets[0].id} (linea {node.lineno}): opciones no soportadas "
-                            "ignoradas (solo path_arc numerico se precarga); el mapeo f->t se conserva.")
-                continue
-            name = _call_name(base.func)
-            if name in ("MathTex", "Tex"):
-                args: list[str] = []
-                dyn = False
-                for a in base.args:
-                    if isinstance(a, ast.Constant) and isinstance(a.value, str):
-                        args.append(a.value)
-                    else:
-                        dyn = True
-                sq.formulas.append(Formula(node.targets[0].id, name, args, node.lineno, dyn))
-                if dyn:
+            gm = _as_glyph_map(node.value)
+            if gm is not None:
+                map_consts[node.targets[0].id] = gm[0]
+                if gm[1]:
                     sq.warnings.append(
-                        f"{node.targets[0].id} (linea {node.lineno}): arg no literal, se omite valor.")
-    # Pasada 2: transiciones (ambos formatos conviven).
-    for node in ast.walk(tree):
-        if isinstance(node, ast.Call) and _call_name(node.func) == "TransformMatchingTex":
-            if len(node.args) >= 2 and all(isinstance(a, ast.Name) for a in node.args[:2]):
-                sq.transitions.append(Transition(node.args[0].id, node.args[1].id, node.lineno))
-        elif isinstance(node, ast.Call) and _call_name(node.func) == "TransformByGlyphMap":
-            if len(node.args) >= 2 and all(isinstance(a, ast.Name) for a in node.args[:2]):
-                mname = ""
-                for a in node.args[2:]:
-                    if isinstance(a, ast.Starred) and isinstance(a.value, ast.Name):
-                        mname = a.value.id
-                        break
-                t = Transition(node.args[0].id, node.args[1].id, node.lineno, mname, "tbgm")
-                sq.transitions.append(t)
-                if mname and mname not in map_consts:
-                    sq.warnings.append(
-                        f"Par {t.from_var}->{t.to_var} (linea {t.line}): *{mname} no es lista literal, precarga omitida.")
-                elif not mname:
-                    # Entradas inline: ([f],[t]), ([f],[t],{"path_arc": ...}), ...
-                    inl = _as_inline_entries(list(node.args[2:]))
-                    if inl:
-                        key = f"{t.from_var}->{t.to_var}"
-                        if key not in sq.prefill:
-                            sq.prefill[key] = inl
-        elif isinstance(node, ast.Call) and _call_name(node.func) == "ReplacementTransform":
-            # Migrable: la escena reemplaza en bloque; la app permite mapearlo y exportar TBGMap.
-            if len(node.args) >= 2 and all(isinstance(a, ast.Name) for a in node.args[:2]):
-                sq.transitions.append(Transition(node.args[0].id, node.args[1].id, node.lineno, "", "repl"))
-    # orden de fuente (ast.walk es BFS) + precarga de mapas literales
-    sq.formulas.sort(key=lambda f: f.line)
-    sq.transitions.sort(key=lambda t: t.line)
-    for t in sq.transitions:
-        if t.map_name and t.map_name in map_consts:
-            sq.prefill[f"{t.from_var}->{t.to_var}"] = map_consts[t.map_name]
-    # pares que apuntan a variables desconocidas
-    known = {f.var for f in sq.formulas}
-    sq.transitions = [t for t in sq.transitions
-                      if not _warn_unknown(sq, t, known)]
-    if any(t.kind == "repl" for t in sq.transitions):
-        sq.warnings.append(
-            "Hay pares con ReplacementTransform: se importan como migrables; "
-            "mapea y exporta TransformByGlyphMap.")
+                        f"*{node.targets[0].id} (linea {node.lineno}): opciones no soportadas "
+                        "ignoradas (solo path_arc numerico se precarga); el mapeo f->t se conserva.")
+    _MAP_CONSTS[id(sq)] = set(map_consts)
+    try:
+        # Pasada 2: ambitos (modulo + cada funcion/metodo) en orden de fuente.
+        seen_tids: set[str] = set()
+        scopes: list[tuple[str, list[ast.stmt]]] = [(
+            "<module>",
+            [s for s in tree.body
+             if not isinstance(s, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))])]
+        for node in ast.walk(tree):
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                scopes.append((node.name,
+                               [s for s in node.body
+                                if not isinstance(s, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))]))
+        for _name, body in scopes:
+            env = dict(consts)
+            _process_block(sorted(body, key=lambda s: getattr(s, "lineno", 0)),
+                           env, sq, seen_tids)
+        # orden de fuente + precarga de mapas literales
+        sq.formulas.sort(key=lambda f: f.line)
+        sq.transitions.sort(key=lambda t: t.line)
+        for t in sq.transitions:
+            if t.map_name and t.map_name in map_consts:
+                sq.prefill[f"{t.from_var}->{t.to_var}"] = map_consts[t.map_name]
+        # pares que apuntan a variables desconocidas
+        known = {f.var for f in sq.formulas}
+        kept = []
+        for t in sq.transitions:
+            if not _warn_unknown(sq, t, known):
+                kept.append(t)
+        sq.transitions = kept
+        if any(t.kind == "repl" for t in sq.transitions):
+            sq.warnings.append(
+                "Hay pares con ReplacementTransform: se importan como migrables; "
+                "mapea y exporta TransformByGlyphMap.")
+    finally:
+        _MAP_CONSTS.pop(id(sq), None)
     return sq, lines
 
 

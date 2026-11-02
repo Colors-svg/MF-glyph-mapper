@@ -140,6 +140,66 @@ def test_repl() -> None:
     print("repl OK: pares migrables, sin precarga, aviso unico")
 
 
+FIXTURE_LOCALS = '''
+from manim import *
+from MF_Tools import TransformMatchingTex
+
+P_NOR = r"\\left( \\frac{P_t}{P_K} \\right)^{m} N"
+CH = r"\\left[" + P_NOR + r"\\right]"
+
+class Demo(Scene):
+    def construct(self):
+        # BLOQUE 9: locales
+        f1 = pintar_partes(MathTex(*F1, font_size=48), {1: "red"})
+        f2 = MathTex(r"I_t = \\epsilon (", r"K^*", r"- K_t)")
+        self.play(ReplacementTransform(f1[1].copy(), f2[1], path_arc=0.5))
+        self.play(TransformMatchingTex(f1, f2))
+        l1 = MathTex(F3[0], font_size=40)
+        for tag, key in (("F9", F9), ("F10", F10)):
+            fx = pintar_partes(MathTex(key, font_size=48), {}, tag)
+            self.play(TransformMatchingTex(f8 if tag == "F9" else f9, fx))
+            if tag == "F9":
+                f9 = fx
+'''
+
+
+def test_locals() -> None:
+    with tempfile.NamedTemporaryFile("w", suffix=".py", delete=False, encoding="utf-8") as f:
+        f.write("F1 = [r\"a\", r\"b\"]\nF3 = [r\"c\", r\"d\"]\n"
+                "F9 = r\"e\"\nF10 = r\"g\"\n"
+                "f8 = MathTex(r\"h\")\n" + FIXTURE_LOCALS)
+        fp = f.name
+    sq, lines = parse_file(fp)
+    by_var = sq.by_var()
+    assert by_var["f1"].args == ["a", "b"], by_var["f1"].args  # *F1 desenrollado
+    assert by_var["l1"].args == ["c"], by_var.get("l1")
+    assert by_var["f2"].args[1] == "K^*"
+    tids = [(t.from_var, t.to_var, t.kind) for t in sq.transitions]
+    assert ("f1", "f2", "tmt") in tids, tids  # TMT con Names
+    assert ("f8", "fx", "tmt") in tids, tids  # loop desenrollado, if resuelto
+    assert ("f9", "fx", "tmt") in tids, tids
+    snap = {f"{t.from_var}->{t.to_var}": (t.latex_a, t.latex_b) for t in sq.transitions}
+    assert snap["f8->fx"][1] == "e", snap  # snapshot iteracion 1 (F9)
+    assert snap["f9->fx"][1] == "g", snap  # snapshot iteracion 2 (F10)
+    assert snap["f9->fx"][0] == "e", snap  # f9 nacio en iteracion 1
+    assert not any("sin MathTex" in w for w in sq.warnings), sq.warnings
+    print("locals OK: consts, starred, subscript, wrapper, loop+if, snapshots")
+
+
+def test_demo_real() -> None:
+    from pathlib import Path as _P
+    demo = _P(r"D:\\manim\\escenas\\demo_tobin_premium.py")
+    if not demo.is_file():
+        print("demo real ausente, salto")
+        return
+    sq, _ = parse_file(str(demo))
+    tids = sorted(f"{t.from_var}->{t.to_var}" for t in sq.transitions)
+    assert tids == ["f2->f4", "f6->f7", "f8->fx", "f9->fx"], tids
+    assert len(sq.formulas) >= 10, len(sq.formulas)
+    assert not any("sin MathTex" in w for w in sq.warnings), sq.warnings
+    print(f"demo real OK: {len(sq.formulas)} formulas, {tids}")
+
+
 def test_bundle() -> None:
     maps = {"eq1->eq2": [([0], [0]), ([1], [1])]}
     meta = {"eq1->eq2": {"fase": "BLOQUE 1", "latex_a": "x^2 + y=1", "latex_b": "x^2 = 1-y"}}
@@ -160,5 +220,7 @@ if __name__ == "__main__":
     test_tbgm()
     test_tbgm_inline()
     test_repl()
+    test_locals()
+    test_demo_real()
     test_bundle()
     print("ALL SEQ TESTS PASSED")

@@ -258,10 +258,10 @@ class Handler(BaseHTTPRequestHandler):
                                    "line": f.line, "dynamic": f.dynamic} for f in sq.formulas],
                     "transitions": [{"from_var": t.from_var, "to_var": t.to_var, "kind": t.kind,
                                       "line": t.line, "fase": ph.get(id(t), "Sin fase"),
-                                      "latex_a": (by_var[t.from_var].args[0]
-                                                  if t.from_var in by_var and by_var[t.from_var].args else ""),
-                                      "latex_b": (by_var[t.to_var].args[0]
-                                                  if t.to_var in by_var and by_var[t.to_var].args else "")}
+                                      "latex_a": (t.latex_a or (by_var[t.from_var].args[0]
+                                                  if t.from_var in by_var and by_var[t.from_var].args else "")),
+                                      "latex_b": (t.latex_b or (by_var[t.to_var].args[0]
+                                                  if t.to_var in by_var and by_var[t.to_var].args else ""))}
                                      for t in sq.transitions],
                     "warnings": sq.warnings, "prefill": sq.prefill})
             elif self.path == "/api/demo":
