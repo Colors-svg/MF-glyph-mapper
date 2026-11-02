@@ -44,7 +44,8 @@ Flujo: **1 Cargar** (.py con `TransformMatchingTex`, `TransformByGlyphMap` o `Re
 listas `GLYPH_MAP_*` literales se precargan, `{"path_arc": …}` por entrada incluido) →
 **2 Mapear** (clic A → clic B conecta; Ctrl individual, Shift rango, arrastre por zona; `path_arc` por conexión en unidades de π + Auto-arcos) →
 **3 Verificar** (validador con las reglas de `transforms.py`) →
-**4 Exportar** (snippet + bundle `agent_bundle.json` + `AGENTE.md` para tu agente Manim) →
+**4 Exportar** (snippet + bundle `agent_bundle.json` v3 + `AGENTE.md` para tu agente Manim, más
+`parche_escena.py` listo para pegar: constructores + plays verificados, cero dudas) →
 **5 Previa** (mp4 real + fotograma).
 
 Atajos: `Ctrl+K` buscar par · `Ctrl+Z/Y` deshacer/rehacer · `Supr` eliminar ·

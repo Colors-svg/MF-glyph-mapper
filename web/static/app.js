@@ -747,7 +747,7 @@ $("f-go").onclick = async () => {
     status(`${T("read_fail")}: ` + (r.error || "?")); toast(T("read_fail"), 4000, true);
     btn.disabled = false; return;
   }
-  S.file = path; S.formulas = r.formulas; S.transitions = r.transitions; S.warnings = r.warnings; S.maps = {}; S.done = {}; S.pre = {}; S._preSeq = (S._preSeq || 0) + 1;
+  S.file = path; S.formulas = r.formulas; S.transitions = r.transitions; S.warnings = r.warnings; S.maps = {}; S.done = {}; S.pre = {}; S.spanCache = {}; S._preSeq = (S._preSeq || 0) + 1;
   // Precarga del .py (TransformByGlyphMap + GLYPH_MAP_* literales, con path_arc). Manda el trabajo guardado si lo hay.
   const pre = r.prefill || {};
   Object.entries(pre).forEach(([tid, gm]) => { S.maps[tid] = (gm || []).map(normExport).filter(Boolean); });
@@ -955,8 +955,8 @@ async function loadPair(i) {
     a = S.pre[i].gA; b = S.pre[i].gB;
   } else {
   try { [a, b] = await Promise.all([
-    api("/api/render", {latex: S.latexA, path: [0]}),
-    api("/api/render", {latex: S.latexB, path: [0]})]); }
+    api("/api/render", {latex: S.latexA, path: [0], args: argsForVar(t.from_var, S.latexA)}),
+    api("/api/render", {latex: S.latexB, path: [0], args: argsForVar(t.to_var, S.latexB)})]); }
   catch (e) { S.gA = S.gB = null; S.conns = []; redraw(); $("m-info").textContent = T("server_down"); return; }
   if (seq !== S._renderSeq) return; // cambiaste de par mientras renderizaba: este resultado ya no vale
   if (a.ok && b.ok) S.pre[i] = {gA: a, gB: b};
@@ -964,6 +964,7 @@ async function loadPair(i) {
   if (!a.ok) { S.gA = S.gB = null; S.conns = []; redraw(); $("m-info").textContent = (S.lang === "es" ? "ERROR inicial: " : "SOURCE ERROR: ") + a.error; return; }
   if (!b.ok) { S.gA = S.gB = null; S.conns = []; redraw(); $("m-info").textContent = (S.lang === "es" ? "ERROR final: " : "TARGET ERROR: ") + b.error; return; }
   S.gA = a; S.gB = b;
+  cacheSpans(S.latexA, a); cacheSpans(S.latexB, b);
   const saved = S.maps[tid];
   S.conns = saved ? saved.map(connFromSaved) : [];
   computeDone(tid); computeSugg();
@@ -974,7 +975,20 @@ async function loadPair(i) {
   refreshMarks();
   redraw(); stepper();
 }
-/* Pre-render progresivo: cola de a un par por vez, sin bloquear. loadPair usa la caché. */
+/* Spans: fronteras de cada arg en el espacio single-string (verificadas por
+   el worker con conteo + anchos). Se piden junto al render y se cachean por
+   latex: el bundle V3 los usa para constructores que no dejan dudas. */
+function argsForVar(v, latex) {
+  const c = (S.formulas || []).filter(f => f.var === v && (f.args || []).length > 1);
+  for (const f of c) { if (f.args.join(" ") === latex) return f.args; }
+  return null;
+}
+function cacheSpans(latex, res) {
+  if (!latex || !res || !res.ok) return;
+  S.spanCache = S.spanCache || {};
+  if (res.spans && res.spans_ok && Object.keys(res.spans).length)
+    S.spanCache[latex] = {spans: res.spans, resolved: res.resolved_len, top: res.top_len};
+}
 async function preloadRest() {
   const seq = ++S._preSeq;
   S.pre = S.pre || {};
@@ -988,9 +1002,10 @@ async function preloadRest() {
     $("st-pre").textContent = S.lang === "es" ? `fondo ${done + 1}/${idxs.length} · ${t.from_var}→${t.to_var}…` : `background ${done + 1}/${idxs.length} · ${t.from_var}→${t.to_var}…`;
     try {
       const [a, b] = await Promise.all([
-        api("/api/render", {latex: t.latex_a, path: [0]}, 300000),
-        api("/api/render", {latex: t.latex_b, path: [0]}, 300000)]);
+        api("/api/render", {latex: t.latex_a, path: [0], args: argsForVar(t.from_var, t.latex_a)}, 300000),
+        api("/api/render", {latex: t.latex_b, path: [0], args: argsForVar(t.to_var, t.latex_b)}, 300000)]);
       if (seq !== S._preSeq) return;
+      cacheSpans(t.latex_a, a); cacheSpans(t.latex_b, b);
       if (a.ok && b.ok) {
         S.pre[i] = {gA: a, gB: b};
         // El fondo ya tiene conteos reales: verifica cobertura sin esperar al clic.
@@ -1281,7 +1296,38 @@ function allIdx(side) {
 }
 
 /* Paso 4 */
-let lastSnippet = "", lastBundle = null, lastAGENTE = "";
+let lastSnippet = "", lastBundle = null, lastAGENTE = "", lastPatch = "";
+function countsFor(i) {
+  const pre = (S.pre && S.pre[i]) ? S.pre[i] : null;
+  const gA = (i === S.pairIdx && S.gA && S.gA.ok) ? S.gA : (pre && pre.gA && pre.gA.ok ? pre.gA : null);
+  const gB = (i === S.pairIdx && S.gB && S.gB.ok) ? S.gB : (pre && pre.gB && pre.gB.ok ? pre.gB : null);
+  if (!gA || !gB) return null;
+  return {n_from: gA.resolved_len, n_to: gB.resolved_len, top_from: gA.top_len, top_to: gB.top_len};
+}
+function exportMeta() {
+  // V3: meta por par (con conteos reales) + formulas (constructores) + orden de guion.
+  const meta = {}, order = [];
+  S.transitions.forEach((t, i) => {
+    const tid = `${t.from_var}->${t.to_var}`;
+    order.push(tid);
+    if (S.maps[tid]) meta[tid] = {fase: t.fase, latex_a: t.latex_a, latex_b: t.latex_b,
+      counts: countsFor(i)};
+  });
+  const formulas = (S.formulas || []).filter(f => (f.args || []).length).map(f => {
+    const tex = f.args.join(" ");
+    const sc = (S.spanCache || {})[tex] || {};
+    return {var: f.var, tex_single: tex, args: f.args, colors: f.colors || {},
+      font_size: (f.font_size === undefined ? null : f.font_size),
+      spans: sc.spans || {},
+      n: (sc.resolved === undefined ? null : sc.resolved),
+      top: (sc.top === undefined ? null : sc.top)};
+  });
+  return {meta, order, formulas};
+}
+function bundleErrs() {
+  if (!lastBundle || !lastBundle.transitions) return null;
+  return lastBundle.transitions.reduce((n, t) => n + (((t.validation || {}).errors) || []).length, 0);
+}
 $("e-snip").onclick = async () => {
   const r = await api("/api/export", {mode: "snippet", glyph_map: S.conns.map(connExport)});
   lastSnippet = r.snippet || ""; $("snip").textContent = lastSnippet;
@@ -1293,17 +1339,15 @@ function dl(name, text, type = "text/plain") {
 }
 $("e-snipdl").onclick = () => lastSnippet ? dl("glyph_map.py", lastSnippet) : toast(T("snip_first"), 3000, true);
 $("e-bundle").onclick = async () => {
-  const meta = {};
-  S.transitions.forEach(t => {
-    const tid = `${t.from_var}->${t.to_var}`;
-    if (S.maps[tid]) meta[tid] = {fase: t.fase, latex_a: t.latex_a, latex_b: t.latex_b};
-  });
-  const r = await api("/api/export", {mode: "bundle", maps: S.maps, meta});
+  const {meta, order, formulas} = exportMeta();
+  const r = await api("/api/export", {mode: "bundle", maps: S.maps, meta, order, formulas});
   lastBundle = r.bundle; lastAGENTE = r.instructions || "";
+  const nerr = bundleErrs();
   let msg, ok = true;
   try {
     const back = JSON.parse(JSON.stringify(lastBundle));
-    msg = `<b>${S.lang === "es" ? "Verificación" : "Check"}:</b> JSON ${S.lang === "es" ? "válido" : "valid"} · <b>${back.transitions.length}/${S.transitions.length}</b> ${T("trans_u")} · ids: ${back.transitions.map(t => t.id).join(", ")}`;
+    msg = `<b>${S.lang === "es" ? "Verificación" : "Check"}:</b> JSON ${S.lang === "es" ? "válido" : "valid"} · <b>${back.transitions.length}/${S.transitions.length}</b> ${T("trans_u")} · ids: ${back.transitions.map(t => t.id).join(", ")}` +
+      (nerr === null ? "" : (nerr ? ` · <b style="color:#f66">${nerr} ${S.lang === "es" ? "errores" : "errors"}</b>` : ` · <b style="color:#3fb950">0 ${S.lang === "es" ? "errores" : "errors"}</b>`));
   } catch (e) { ok = false; msg = "JSON INVALID: " + e; }
   const elx = $("bundle-report");
   elx.className = "report " + (ok ? "ok" : "err");
@@ -1314,6 +1358,17 @@ $("e-bundle").onclick = async () => {
 $("e-bdl").onclick = () => lastBundle ? dl("agent_bundle.json", JSON.stringify(lastBundle, null, 2), "application/json") : toast(T("bundle_first"), 3000, true);
 $("e-adl").onclick = () => lastAGENTE ? dl("AGENTE.md", lastAGENTE) : toast(T("bundle_first"), 3000, true);
 let lastGlob = "";
+$("e-patch").onclick = async () => {
+  if (!Object.keys(S.maps).length) { $("patch").textContent = ""; return toast(T("no_maps"), 3000, true); }
+  const {meta, order, formulas} = exportMeta();
+  let r;
+  try { r = await api("/api/export", {mode: "patch", maps: S.maps, meta, order, formulas}); }
+  catch (e) { toast(T("server_down"), 3000, true); return; }
+  lastPatch = (r && r.patch) || "";
+  $("patch").textContent = lastPatch;
+  if (lastPatch) toast(`${S.lang === "es" ? "Parche listo" : "Patch ready"}: <b>${Object.keys(S.maps).length}</b> ${T("trans_u")}.`);
+};
+$("e-patchdl").onclick = () => lastPatch ? dl("parche_escena.py", lastPatch, "text/x-python") : toast(T("patch_first"), 3000, true);
 $("e-glob").onclick = async () => {
   const meta = {};
   S.transitions.forEach(t => {

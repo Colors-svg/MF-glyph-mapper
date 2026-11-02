@@ -238,6 +238,32 @@ def test_demo_real() -> None:
     print(f"demo real OK: {len(sq.formulas)} formulas, {tids}")
 
 
+def test_colors() -> None:
+    src = ('from manim import *\n'
+           'AMAR = "#f9d66b"\n'
+           'BASE_FS = 48\n'
+           'class D(Scene):\n'
+           '    def construct(self):\n'
+           '        f1 = pintar_partes(MathTex(r"a", r"b"), {1: AMAR}, "F1")\n'
+           '        f2 = MathTex(r"x", font_size=40)\n'
+           '        f3 = MathTex(r"y", font_size=BASE_FS)\n'
+           '        f4 = pintar_partes(MathTex(r"m", r"n"), {0: "#fff", 2: NOEXISTE}, "F4")\n'
+           '        f5 = pintar_partes(MathTex(r"p"), {0: OTRO}, "F5")\n')
+    with tempfile.NamedTemporaryFile("w", suffix=".py", delete=False, encoding="utf-8") as f:
+        f.write(src)
+        fp = f.name
+    sq, _ = parse_file(fp)
+    by = sq.by_var()
+    assert by["f1"].colors == {1: "#f9d66b"}, by["f1"].colors
+    assert by["f1"].font_size is None  # sin kwarg -> default de Manim
+    assert by["f2"].colors == {} and by["f2"].font_size == 40
+    assert by["f3"].font_size == 48, by["f3"].font_size  # BASE_FS resuelto
+    assert by["f4"].colors == {0: "#fff"}, by["f4"].colors  # NOEXISTE se omite
+    assert by["f5"].colors == {}  # dict no literal -> vacio + aviso
+    assert any("f5" in w and "colores" in w for w in sq.warnings), sq.warnings
+    print("colors OK: pintar_partes, consts, font_size, aviso no literal")
+
+
 def test_bundle() -> None:
     maps = {"eq1->eq2": [([0], [0]), ([1], [1])]}
     meta = {"eq1->eq2": {"fase": "BLOQUE 1", "latex_a": "x^2 + y=1", "latex_b": "x^2 = 1-y"}}
@@ -248,7 +274,7 @@ def test_bundle() -> None:
     assert json.loads(s) == b
     md = build_agent_instructions(b)
     assert "eq1->eq2" in md and "TransformByGlyphMap" in md
-    assert "Prohibiciones" in md and "latex_a" in md and "show_indices" in md
+    assert "REGLA DE ORO" in md and "single-string" in md and "show_indices" in md
     assert "1.1.1" in md
     print("bundle + AGENTE.md OK")
 
@@ -261,5 +287,6 @@ if __name__ == "__main__":
     test_locals()
     test_carry()
     test_demo_real()
+    test_colors()
     test_bundle()
     print("ALL SEQ TESTS PASSED")

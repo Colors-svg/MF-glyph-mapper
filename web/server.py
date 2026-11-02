@@ -101,7 +101,7 @@ from mf_core.seq_extract import parse_file  # noqa: E402
 from mf_core.validator import validate  # noqa: E402
 from mf_core.exporter import (  # noqa: E402
     build_snippet, build_project, build_agent_bundle, build_agent_instructions,
-    build_global_maps,
+    build_global_maps, build_scene_patch,
 )
 
 WEB = Path(__file__).resolve().parent
@@ -160,7 +160,8 @@ def _run_worker(script: str, payload: dict, timeout: int) -> dict:
     if script == "glyph_worker.py":
         import hashlib
         key = CACHE / (hashlib.sha256(json.dumps(
-            {"latex": payload.get("latex", ""), "path": payload.get("path", [0])},
+            {"latex": payload.get("latex", ""), "path": payload.get("path", [0]),
+             "args": payload.get("args", None)},
             sort_keys=True).encode()).hexdigest() + ".json")
         if key.is_file():
             try:
@@ -255,7 +256,9 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json({
                     "ok": True, "path": sq.path,
                     "formulas": [{"var": f.var, "kind": f.kind, "args": f.args,
-                                   "line": f.line, "dynamic": f.dynamic} for f in sq.formulas],
+                                   "line": f.line, "dynamic": f.dynamic,
+                                   "colors": getattr(f, "colors", {}),
+                                   "font_size": getattr(f, "font_size", None)} for f in sq.formulas],
                     "transitions": [{"from_var": t.from_var, "to_var": t.to_var, "kind": t.kind,
                                       "line": t.line, "fase": ph.get(id(t), "Sin fase"),
                                       "latex_a": (t.latex_a or (by_var[t.from_var].args[0]
@@ -269,7 +272,8 @@ class Handler(BaseHTTPRequestHandler):
                                  "exists": DEMO.is_file()})
             elif self.path == "/api/render":
                 self._send_json(_run_worker("glyph_worker.py",
-                                            {"latex": req.get("latex", ""), "path": req.get("path", [0])}, 180))
+                                            {"latex": req.get("latex", ""), "path": req.get("path", [0]),
+                                             "args": req.get("args", [])}, 180))
             elif self.path == "/api/validate":
                 self._send_json({"ok": True, "issues": [
                     {"code": i.code, "level": i.level, "message": i.message,
@@ -290,11 +294,59 @@ class Handler(BaseHTTPRequestHandler):
                     self._send_json({"ok": True, "project": proj})
                 elif mode == "bundle":
                     maps = req.get("maps", {})
+                    meta = req.get("meta", {})
+                    order = req.get("order", [t for t in maps])
+                    formulas = req.get("formulas", [])
+                    validations: dict[str, dict] = {}
+                    for tid, gm in maps.items():
+                        c = (meta.get(tid, {}) or {}).get("counts", {})
+                        try:
+                            nf = int(c.get("n_from"))
+                            nt = int(c.get("n_to"))
+                        except Exception:
+                            validations[tid] = {"errors": [], "warnings": [
+                                {"code": "NO_COUNTS",
+                                 "message": "Sin conteos del par: abre el par en el Mapper para validar."}]}
+                            continue
+                        issues = validate(nf, nt, _norm_gm(gm),
+                                          top_from=int(c.get("top_from", 1)),
+                                          top_to=int(c.get("top_to", 1)))
+                        validations[tid] = {
+                            "errors": [{"code": i.code, "message": i.message}
+                                       for i in issues if i.level == "error"],
+                            "warnings": [{"code": i.code, "message": i.message}
+                                         for i in issues if i.level != "error"]}
                     bundle = build_agent_bundle(
                         {k: _norm_gm(v) for k, v in maps.items()},
-                        req.get("meta", {}))
+                        meta, formulas=formulas, validations=validations, order=order)
                     self._send_json({"ok": True, "bundle": bundle,
                                       "instructions": build_agent_instructions(bundle)})
+                elif mode == "patch":
+                    maps = req.get("maps", {})
+                    meta = req.get("meta", {})
+                    order = req.get("order", [t for t in maps])
+                    formulas = req.get("formulas", [])
+                    validations = {}
+                    for tid, gm in maps.items():
+                        c = (meta.get(tid, {}) or {}).get("counts", {})
+                        try:
+                            nf = int(c.get("n_from"))
+                            nt = int(c.get("n_to"))
+                            issues = validate(nf, nt, _norm_gm(gm),
+                                              top_from=int(c.get("top_from", 1)),
+                                              top_to=int(c.get("top_to", 1)))
+                            validations[tid] = {
+                                "errors": [{"code": i.code, "message": i.message}
+                                           for i in issues if i.level == "error"],
+                                "warnings": [{"code": i.code, "message": i.message}
+                                             for i in issues if i.level != "error"]}
+                        except Exception:
+                            validations[tid] = {"errors": [], "warnings": [
+                                {"code": "NO_COUNTS",
+                                 "message": "Sin conteos del par: abre el par en el Mapper para validar."}]}
+                    self._send_json({"ok": True, "patch": build_scene_patch(
+                        {k: _norm_gm(v) for k, v in maps.items()},
+                        meta, formulas=formulas, validations=validations, order=order)})
                 elif mode == "scene":
                     maps = req.get("maps", {})
                     self._send_json({"ok": True, "python": build_global_maps(

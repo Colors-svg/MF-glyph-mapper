@@ -45,7 +45,8 @@ Flow: **1 Load** (.py with `TransformMatchingTex`, `TransformByGlyphMap` or `Rep
 `GLYPH_MAP_*` lists are preloaded, per-entry `{"path_arc": …}` included) →
 **2 Map** (click A then click B to connect; Ctrl = individual, Shift = range,
 drag = marquee; per-connection `path_arc` in π units + Auto-arcs) → **3 Verify** (validator with the `transforms.py` rules) →
-**4 Export** (snippet + `agent_bundle.json` + `AGENTE.md` for your Manim agent) →
+**4 Export** (snippet + `agent_bundle.json` v3 + `AGENTE.md` for your Manim agent, plus a ready-to-paste
+`parche_escena.py`: verified constructors + plays, zero doubts) →
 **5 Preview** (real mp4 + filmstrip frame).
 
 Shortcuts: `Ctrl+K` find pair · `Ctrl+Z/Y` undo/redo · `Del` delete ·

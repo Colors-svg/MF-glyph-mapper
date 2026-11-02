@@ -15,11 +15,14 @@ class GlyphInfo:
     points: list[list[float]]  # bezier points (x,y,z) tal cual Manim
 
 
-def extract_glyphs(latex: str, mob_submobject_index: list[int] | None = None) -> dict[str, Any]:
+def extract_glyphs(latex: str, mob_submobject_index: list[int] | None = None,
+                   args: list[str] | None = None) -> dict[str, Any]:
     """Instancia el MathTex real y devuelve glifos en la ruta dada.
 
     Nunca parsea LaTeX a mano: pregunta a Manim por sus submobjects.
     Retorna dict JSON-serializable con ok/glyphs o ok=False/error.
+    Si `args` (multi-arg) viene dado, calcula `spans`: fronteras de cada
+    arg en el espacio single-string, verificadas por conteo y anchos.
     """
     from manim import MathTex
     path = [0] if mob_submobject_index is None else list(mob_submobject_index)
@@ -59,9 +62,37 @@ def extract_glyphs(latex: str, mob_submobject_index: list[int] | None = None) ->
                 f"top_len={top_len} con path [0]: solo se ve la primera parte. "
                 "Tipico de {{...}} o MathTex multi-arg. Cambia la ruta o usa single-string."
             )
+        spans: dict[str, list[int]] = {}
+        spans_ok = True
+        if args is not None and len(args) > 1 and top_len == 1 and path == [0]:
+            try:
+                ref = MathTex(*args)
+                counts = [len(g.submobjects) for g in ref.submobjects]
+                bounds: list[tuple[int, int]] = []
+                acc = 0
+                for c in counts:
+                    bounds.append((acc, acc + c))
+                    acc += c
+                ok = acc == resolved_len
+                if ok:
+                    for j, (a, b) in enumerate(bounds):
+                        sl = [round(float(x.width), 6) for x in target[a:b]]
+                        rf = [round(float(x.width), 6) for x in ref[j].submobjects]
+                        if sl != rf:
+                            ok = False
+                            break
+                if ok:
+                    spans = {str(j): [a, b] for j, (a, b) in enumerate(bounds)}
+                else:
+                    spans_ok = False
+                    warnings.append("spans no verificados: el multi-arg no reparte igual; se omiten.")
+            except Exception as e:  # noqa: BLE001
+                spans_ok = False
+                warnings.append(f"spans fallo: {type(e).__name__}; se omiten.")
         return {"ok": True, "latex": latex, "path": path,
                 "top_len": top_len, "resolved_len": resolved_len,
-                "glyphs": glyphs, "warnings": warnings}
+                "glyphs": glyphs, "warnings": warnings,
+                "spans": spans, "spans_ok": spans_ok}
     except Exception as e:
         return {"ok": False, "error": f"Resolucion de ruta {path} fallo: {type(e).__name__}: {e}",
                 "latex": latex, "path": path}

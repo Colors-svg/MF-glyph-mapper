@@ -9,6 +9,9 @@ def main() -> int:
         req = json.loads(raw)
         latex = req.get("latex", "")
         path = req.get("path", [0])
+        args = req.get("args", None)
+        if not isinstance(args, list) or not all(isinstance(x, str) for x in args):
+            args = None
     except Exception as e:
         print(json.dumps({"ok": False, "error": f"request invalido: {e}"}))
         return 0
@@ -20,16 +23,17 @@ def main() -> int:
         sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
         sys.path.insert(0, os.path.join(os.getcwd(), "src"))
         from mf_core.extractor import extract_glyphs
-    print(json.dumps(_render_with_retry(extract_glyphs, latex, path)))
+    print(json.dumps(_render_with_retry(extract_glyphs, latex, path, args=args)))
     return 0
 
 
-def _render_with_retry(extract_glyphs, latex: str, path: list[int], attempts: int = 6) -> dict:
+def _render_with_retry(extract_glyphs, latex: str, path: list[int], attempts: int = 6,
+                       args: list[str] | None = None) -> dict:
     """Reintenta errores transitorios de .dvi bloqueado por otro render paralelo (WinError 32)."""
     import time
     last: dict = {"ok": False, "error": "sin intentos"}
     for i in range(attempts):
-        last = extract_glyphs(latex, path)
+        last = extract_glyphs(latex, path, args=args)
         if last.get("ok"):
             return last
         err = str(last.get("error", ""))

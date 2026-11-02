@@ -27,6 +27,8 @@ class Formula:
     args: list[str]  # literales tal cual (multi-arg se conserva)
     line: int
     dynamic: bool = False  # True si algun arg no es literal
+    colors: dict = field(default_factory=dict)  # {arg_idx: "#hex"} de pintar_partes(..., {..})
+    font_size: int | None = None  # kwarg font_size resuelto (None = default de Manim)
 
 
 @dataclass
@@ -288,8 +290,69 @@ def _resolve_arg(node: ast.AST, env: dict) -> list[str] | None:
     return None
 
 
-def _formula_from_value(value: ast.AST, env: dict) -> tuple[bool, list[str] | None]:
-    """(es_tex, args | None). Desenvuelve pintar_partes(MathTex(...))."""
+def _wrapper_colors(value: ast.AST, env: dict) -> tuple[dict, bool]:
+    """{arg_idx: color} del 2o arg de envoltorios tipo pintar_partes(mob, {..}).
+
+    Retorna (colores, habia_dict). Los colores se resuelven via constantes
+    (AMAR -> "#..."); lo no literal se omite. El envoltorio mas interno manda.
+    """
+    found = False
+    layers: list[dict] = []
+    v = value
+    while isinstance(v, ast.Call) and isinstance(v.func, ast.Name) \
+            and v.func.id not in ("MathTex", "Tex"):
+        if len(v.args) >= 2 and isinstance(v.args[1], ast.Dict):
+            found = True
+            layer: dict = {}
+            for k, vv in zip(v.args[1].keys, v.args[1].values):
+                if not (isinstance(k, ast.Constant) and isinstance(k.value, int)
+                        and not isinstance(k.value, bool)):
+                    continue
+                if isinstance(vv, ast.Constant) and isinstance(vv.value, str):
+                    layer[k.value] = vv.value
+                elif isinstance(vv, ast.Name) and isinstance(env.get(vv.id), str):
+                    layer[k.value] = env[vv.id]
+            layers.append(layer)
+        if len(v.args) >= 1 and isinstance(v.args[0], ast.Call):
+            v = v.args[0]
+        else:
+            break
+    out: dict = {}
+    for layer in reversed(layers):  # interno (ultimo) gana
+        out.update(layer)
+    return out, found
+
+
+def _collect_num_consts(tree: ast.AST) -> dict:
+    """NAME -> int | float para literales de modulo (una pasada + punto fijo)."""
+    cands: dict[str, ast.AST] = {}
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Assign) and len(node.targets) == 1 \
+                and isinstance(node.targets[0], ast.Name):
+            cands[node.targets[0].id] = node.value
+    env: dict = {}
+    for _ in range(10):
+        changed = False
+        for k, v in cands.items():
+            if k in env:
+                continue
+            r = None
+            if isinstance(v, ast.Constant) and isinstance(v.value, (int, float)) \
+                    and not isinstance(v.value, bool):
+                r = v.value
+            elif isinstance(v, ast.Name) and isinstance(env.get(v.id), (int, float)):
+                r = env[v.id]
+            if r is not None:
+                env[k] = r
+                changed = True
+        if not changed:
+            break
+    return env
+
+
+def _formula_from_value(value: ast.AST, env: dict) -> tuple[bool, list[str] | None, dict, bool, int | None]:
+    """(es_tex, args | None, colores, habia_dict_color, font_size). Desenvuelve pintar_partes(MathTex(...))."""
+    colors, had_dict = _wrapper_colors(value, env)
     v = value
     while isinstance(v, ast.Call) and isinstance(v.func, ast.Name) \
             and v.func.id not in ("MathTex", "Tex") \
@@ -297,14 +360,22 @@ def _formula_from_value(value: ast.AST, env: dict) -> tuple[bool, list[str] | No
         v = v.args[0]
     v = _base_call(v)
     if v is None or _call_name(v.func) not in ("MathTex", "Tex"):
-        return False, None
+        return False, None, {}, False, None
+    font_size: int | None = None
+    for kw in getattr(v, "keywords", []):
+        if kw.arg == "font_size":
+            if isinstance(kw.value, ast.Constant) and isinstance(kw.value.value, int) \
+                    and not isinstance(kw.value.value, bool):
+                font_size = kw.value.value
+            elif isinstance(kw.value, ast.Name) and isinstance(env.get(kw.value.id), (int, float)):
+                font_size = int(env[kw.value.id])
     args: list[str] = []
     for a in v.args:
         r = _resolve_arg(a, env)
         if r is None:
-            return True, None
+            return True, None, colors, had_dict, font_size
         args.extend(r)
-    return True, args
+    return True, args, colors, had_dict, font_size
 
 
 def _eval_test(test: ast.AST, env: dict):
@@ -520,7 +591,7 @@ def _process_block(stmts: list[ast.stmt], env: dict, sq: SequenceFile,
                 # no es formula; el par real lo crea el ReplacementTransform.
                 env[var] = ("__copy__", cp[0], cp[1])
                 continue
-            is_tex, args = _formula_from_value(st.value, env)
+            is_tex, args, colors, had_dict, fsize = _formula_from_value(st.value, env)
             if is_tex:
                 if args is None:
                     sq.formulas.append(Formula(var, "MathTex", [], st.lineno, True))
@@ -528,7 +599,10 @@ def _process_block(stmts: list[ast.stmt], env: dict, sq: SequenceFile,
                         f"{var} (linea {st.lineno}): arg no literal, se omite valor.")
                     env[var] = None
                 else:
-                    sq.formulas.append(Formula(var, "MathTex", args, st.lineno, False))
+                    if had_dict and not colors:
+                        sq.warnings.append(
+                            f"{var} (linea {st.lineno}): colores no literales, se omiten.")
+                    sq.formulas.append(Formula(var, "MathTex", args, st.lineno, False, colors, fsize))
                     env[var] = list(args)
             elif isinstance(st.value, ast.Name) and st.value.id in env:
                 v = env[st.value.id]  # alias: f9 = fx propaga el latex vigente
@@ -552,7 +626,7 @@ def _process_block(stmts: list[ast.stmt], env: dict, sq: SequenceFile,
                 for sub in ast.walk(st):
                     if isinstance(sub, ast.Assign) and len(sub.targets) == 1 \
                             and isinstance(sub.targets[0], ast.Name):
-                        is_tex, args = _formula_from_value(sub.value, env)
+                        is_tex, args, colors, had_dict, fsize = _formula_from_value(sub.value, env)
                         if is_tex:
                             if args is None:
                                 sq.formulas.append(
@@ -560,7 +634,7 @@ def _process_block(stmts: list[ast.stmt], env: dict, sq: SequenceFile,
                                 env[sub.targets[0].id] = None
                             else:
                                 sq.formulas.append(
-                                    Formula(sub.targets[0].id, "MathTex", args, sub.lineno, False))
+                                    Formula(sub.targets[0].id, "MathTex", args, sub.lineno, False, colors, fsize))
                                 env[sub.targets[0].id] = list(args)
                 continue
             for row in rows:
@@ -606,6 +680,7 @@ def parse_file(path: str) -> tuple[SequenceFile, list[str]]:
         return sq, lines
     sq = SequenceFile(path=path)
     consts = _collect_consts(tree)
+    consts.update(_collect_num_consts(tree))  # font_size y numericos (BASE_FS=48...)
     # Pasada 1: mapas literales GLYPH_MAP_* (orden irrelevante).
     map_consts: dict[str, list] = {}
     for node in ast.walk(tree):
