@@ -46,6 +46,15 @@ _CODE_REV = _code_rev()
 _STARTED = __import__("time").strftime("%H:%M:%S")
 
 
+def _worker_env() -> dict:
+    """Entorno de workers: PYTHONPATH con el shim anti-ventanas (Windows)."""
+    import os
+    env = dict(os.environ)
+    shim = str(ROOT / "src" / "mf_winshim")
+    env["PYTHONPATH"] = shim + os.pathsep + env.get("PYTHONPATH", "")
+    return env
+
+
 def _run_worker(script: str, payload: dict, timeout: int) -> dict:
     key = None
     if script == "glyph_worker.py":
@@ -62,7 +71,7 @@ def _run_worker(script: str, payload: dict, timeout: int) -> dict:
                 pass
     p = subprocess.run([sys.executable, str(ROOT / "src" / "mf_core" / script)],
                        input=json.dumps(payload), capture_output=True,
-                       text=True, timeout=timeout)
+                       text=True, timeout=timeout, env=_worker_env())
     out = (p.stdout or "").strip()
     if not out:
         return {"ok": False, "error": f"worker sin stdout rc={p.returncode}: {(p.stderr or '')[-2000:]}"}

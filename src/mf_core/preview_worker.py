@@ -13,6 +13,20 @@ def _manim() -> list[str]:
     return [sys.executable, "-m", "manim", "render"]
 
 
+def _quiet_kwargs() -> dict:
+    """Sin ventanas de consola en Windows (los flashes de latex/dvisvgm/ffmpeg)."""
+    if sys.platform != "win32":
+        return {}
+    try:
+        si = subprocess.STARTUPINFO()
+        si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        si.wShowWindow = subprocess.SW_HIDE
+        return {"creationflags": getattr(subprocess, "CREATE_NO_WINDOW", 0),
+                "startupinfo": si}
+    except Exception:
+        return {}
+
+
 def main() -> int:
     try:
         raw = sys.argv[1] if len(sys.argv) > 1 else sys.stdin.read()
@@ -50,6 +64,7 @@ def main() -> int:
                 _manim() + ["-q" + quality, "--media_dir", str(Path(tmp) / "media"),
                             str(scene), "PrevScene"],
                 capture_output=True, text=True, timeout=300, cwd=str(root),
+                **_quiet_kwargs(),
             )
             log_tail = (p.stdout + p.stderr)[-2000:]
             if p.returncode != 0:
@@ -72,6 +87,7 @@ def main() -> int:
                 ["ffmpeg", "-y", "-v", "error", "-sseof", "-0.1", "-i", str(mp4),
                  "-vframes", "1", str(png)],
                 capture_output=True, text=True, timeout=60,
+                **_quiet_kwargs(),
             )
             if f.returncode != 0 or not png.exists():
                 print(json.dumps({"ok": False, "error": "ffmpeg no extrajo fotograma",
