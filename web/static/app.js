@@ -32,6 +32,7 @@ function applyLang() {
   if ($("f-path") && !$("f-path").value) $("f-path").placeholder = T("fpath_ph");
   if ($("b-quick")) $("b-quick").textContent = S.quick ? T("quick_on") : T("quick_off");
   if ($("b-curves")) $("b-curves").textContent = S.hideConn ? T("curves_off") : T("curves_on");
+  if ($("b-autoarc") && !S._arcFlash) $("b-autoarc").textContent = T("autoarc_btn");
   updateSuggBtn(); stepper(); refreshMarks(); redraw();
 }
 try { S.lang = localStorage.getItem("mf-lang") || "es"; } catch (e) { S.lang = "es"; }
@@ -917,23 +918,37 @@ $("b-conn").onclick = () => addConn([...S.selA], [...S.selB]);
   if ($("b-autoarc")) return;
   const b = document.createElement("button");
   b.id = "b-autoarc";
-  b.title = S.lang === "es"
-    ? "Auto-arcos: propone path_arc por dirección (editable por conexión)"
-    : "Auto-arcs: propose path_arc by direction (editable per connection)";
-  b.textContent = "Auto-arcs ⤴";
+  b.className = "ghost";
+  b.setAttribute("data-i18n", "autoarc_btn");
+  b.setAttribute("data-i18n-title", "autoarc_title");
+  b.textContent = T("autoarc_btn");
+  b.title = T("autoarc_title");
   const ref = $("b-conn");
   (ref && ref.parentNode ? ref.parentNode : ref).insertBefore(b, ref ? ref.nextSibling : null);
   b.onclick = () => {
     if (!S.conns.length) return toast(T("add_sel"), 2500, true);
     snap();
+    let changed = 0;
     S.conns.forEach(c => {
       const v = autoArcFor(c);
-      if (Math.abs(v) < 1e-9) delete c.arc;
-      else c.arc = v;
+      const had = connArc(c);
+      const nv = Math.abs(v) < 1e-9 ? null : v;
+      if ((had === null) !== (nv === null) || (had !== null && nv !== null && Math.abs(had - nv) > 1e-9)) changed++;
+      if (nv === null) delete c.arc;
+      else c.arc = nv;
     });
     redraw(); autoSave();
     if (S._delIdx !== undefined) inspectConn(S._delIdx);
-    toast(S.lang === "es" ? "Auto-arcos aplicados (editables por conexión)." : "Auto-arcs applied (editable per connection).", 2500);
+    // Feedback momentáneo: la acción es puntual, no un modo. Flash + texto con cuenta.
+    S._arcFlash = true;
+    b.classList.remove("ghost"); b.classList.add("primary");
+    b.textContent = changed
+      ? (S.lang === "es" ? `Auto-arcos ✓ (${changed})` : `Auto-arcs ✓ (${changed})`)
+      : (S.lang === "es" ? "Auto-arcos ✓ (sin cambios)" : "Auto-arcs ✓ (no changes)");
+    setTimeout(() => { S._arcFlash = false; b.classList.remove("primary"); b.classList.add("ghost"); b.textContent = T("autoarc_btn"); }, 1200);
+    toast(changed
+      ? (S.lang === "es" ? `Auto-arcos aplicados a <b>${changed}</b> (editables por conexión).` : `Auto-arcs applied to <b>${changed}</b> (editable per connection).`)
+      : (S.lang === "es" ? "Los arcos ya estaban como los propone el auto." : "Arcs already match the auto proposal."), 2500);
   };
 })();
 $("b-sugg").onclick = () => acceptSugg();

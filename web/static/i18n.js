@@ -122,6 +122,8 @@ es: {
   arc_auto_title: "Proponer arco por dirección origen→destino",
   arc_clear_title: "Quitar curva",
   arc_bad: "Arco inválido: usa número en unidades de π (-4…4).",
+  autoarc_btn: "Auto-arcos",
+  autoarc_title: "Propone path_arc por dirección a todas (luego editable por conexión)",
   repl_tag: "↯ Replacement · migrable",
 },
 en: {
@@ -246,6 +248,8 @@ en: {
   arc_auto_title: "Propose arc by source→target direction",
   arc_clear_title: "Remove curve",
   arc_bad: "Invalid arc: use a number in π units (-4…4).",
+  autoarc_btn: "Auto-arcs",
+  autoarc_title: "Propose path_arc by direction to all (then editable per connection)",
   repl_tag: "↯ Replacement · migratable",
 }
 };
