@@ -78,6 +78,30 @@ def test_tbgm() -> None:
     print("tbgm OK: ambos formatos, precarga literal, dinamico y opciones avisados")
 
 
+FIXTURE_REPL = '''
+from manim import *
+
+class Demo(Scene):
+    def construct(self):
+        # BLOQUE 1: reemplazo
+        a = MathTex(r"x = y")
+        b = MathTex(r"y = x")
+        self.play(ReplacementTransform(a, b))
+        self.play(ReplacementTransform(a, b, run_time=1.2))
+'''
+
+
+def test_repl() -> None:
+    with tempfile.NamedTemporaryFile("w", suffix=".py", delete=False, encoding="utf-8") as f:
+        f.write(FIXTURE_REPL)
+        fp = f.name
+    sq, lines = parse_file(fp)
+    assert [(t.from_var, t.to_var, t.kind) for t in sq.transitions] == [("a", "b", "repl"), ("a", "b", "repl")]
+    assert sq.prefill == {}
+    assert any("ReplacementTransform" in w for w in sq.warnings)
+    print("repl OK: pares migrables, sin precarga, aviso unico")
+
+
 def test_bundle() -> None:
     maps = {"eq1->eq2": [([0], [0]), ([1], [1])]}
     meta = {"eq1->eq2": {"fase": "BLOQUE 1", "latex_a": "x^2 + y=1", "latex_b": "x^2 = 1-y"}}
@@ -96,5 +120,6 @@ def test_bundle() -> None:
 if __name__ == "__main__":
     test_fixture()
     test_tbgm()
+    test_repl()
     test_bundle()
     print("ALL SEQ TESTS PASSED")

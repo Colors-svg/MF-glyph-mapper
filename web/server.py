@@ -147,7 +147,7 @@ class Handler(BaseHTTPRequestHandler):
                     "ok": True, "path": sq.path,
                     "formulas": [{"var": f.var, "kind": f.kind, "args": f.args,
                                    "line": f.line, "dynamic": f.dynamic} for f in sq.formulas],
-                    "transitions": [{"from_var": t.from_var, "to_var": t.to_var,
+                    "transitions": [{"from_var": t.from_var, "to_var": t.to_var, "kind": t.kind,
                                       "line": t.line, "fase": ph.get(id(t), "Sin fase"),
                                       "latex_a": (by_var[t.from_var].args[0]
                                                   if t.from_var in by_var and by_var[t.from_var].args else ""),

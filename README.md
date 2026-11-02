@@ -40,7 +40,7 @@ Manim uses). No app dependencies: the server is pure stdlib.
 - **Manual:** from the repo root, `python web/server.py` → open http://127.0.0.1:8765/
 - **No scene file at hand:** **Try demo** button (3-pair scene bundled in `demo/`).
 
-Flow: **1 Load** (.py with `TransformMatchingTex` or `TransformByGlyphMap` — literal
+Flow: **1 Load** (.py with `TransformMatchingTex`, `TransformByGlyphMap` or `ReplacementTransform` (migratable) — literal
 `GLYPH_MAP_*` lists are preloaded) →
 **2 Map** (click A then click B to connect; Ctrl = individual, Shift = range,
 drag = marquee) → **3 Verify** (validator with the `transforms.py` rules) →

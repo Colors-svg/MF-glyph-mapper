@@ -719,7 +719,7 @@ function renderTList(f = "") {
     const d = document.createElement("div");
     d.className = "tr" + (i === S.pairIdx ? " cur" : "");
     const mk = markFor(tid);
-    d.innerHTML = `<span class="${mk.cls}">${mk.mark}</span><span class="badge ${mk.bcls}">${tid}</span><span>${t.fase}</span>`;
+    d.innerHTML = `<span class="${mk.cls}">${mk.mark}</span><span class="badge ${mk.bcls}">${tid}</span><span>${t.fase}</span>` + (t.kind === "repl" ? ` <span class="hint">${T("repl_tag")}</span>` : "");
     d.title = (t.latex_a + " → " + t.latex_b).slice(0, 160);
     d.onclick = async () => { const sel = $("pair-sel"), want = String(i);
       let has = false; for (const o of sel.options) { if (o.value === want) { has = true; break; } }

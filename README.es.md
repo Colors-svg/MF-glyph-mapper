@@ -39,7 +39,7 @@ Sin dependencias de la app: el servidor es stdlib puro.
 - **Manual:** desde la raíz del repo, `python web/server.py` → abre http://127.0.0.1:8765/
 - **Demo sin archivo propio:** botón **Probar demo** (escena de 3 pares incluida en `demo/`).
 
-Flujo: **1 Cargar** (.py con `TransformMatchingTex` o `TransformByGlyphMap` — las
+Flujo: **1 Cargar** (.py con `TransformMatchingTex`, `TransformByGlyphMap` o `ReplacementTransform` (migrable) — las
 listas `GLYPH_MAP_*` literales se precargan) →
 **2 Mapear** (clic A → clic B conecta; Ctrl individual, Shift rango, arrastre por zona) →
 **3 Verificar** (validador con las reglas de `transforms.py`) →

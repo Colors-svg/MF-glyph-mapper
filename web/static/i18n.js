@@ -115,6 +115,7 @@ es: {
   sel_cleared: "Selección limpiada.",
   insp_conn: "Conexión",
   insp_del_hint: "Marca y pulsa Eliminar para quitarla.",
+  repl_tag: "↯ Replacement · migrable",
 },
 en: {
   brand_sub: "real indices · Manim",
@@ -231,5 +232,6 @@ en: {
   sel_cleared: "Selection cleared.",
   insp_conn: "Connection",
   insp_del_hint: "Mark and press Delete to remove it.",
+  repl_tag: "↯ Replacement · migratable",
 }
 };

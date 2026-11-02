@@ -27,6 +27,7 @@ class Transition:
     to_var: str
     line: int
     map_name: str = ""  # *GLYPH_MAP_X si viene de TransformByGlyphMap
+    kind: str = "tmt"  # tmt | tbgm | repl (ReplacementTransform migrable)
 
 
 @dataclass
@@ -163,11 +164,15 @@ def parse_file(path: str) -> tuple[SequenceFile, list[str]]:
                     if isinstance(a, ast.Starred) and isinstance(a.value, ast.Name):
                         mname = a.value.id
                         break
-                t = Transition(node.args[0].id, node.args[1].id, node.lineno, mname)
+                t = Transition(node.args[0].id, node.args[1].id, node.lineno, mname, "tbgm")
                 sq.transitions.append(t)
                 if mname and mname not in map_consts:
                     sq.warnings.append(
                         f"Par {t.from_var}->{t.to_var} (linea {t.line}): *{mname} no es lista literal, precarga omitida.")
+        elif isinstance(node, ast.Call) and _call_name(node.func) == "ReplacementTransform":
+            # Migrable: la escena reemplaza en bloque; la app permite mapearlo y exportar TBGMap.
+            if len(node.args) >= 2 and all(isinstance(a, ast.Name) for a in node.args[:2]):
+                sq.transitions.append(Transition(node.args[0].id, node.args[1].id, node.lineno, "", "repl"))
     # orden de fuente (ast.walk es BFS) + precarga de mapas literales
     sq.formulas.sort(key=lambda f: f.line)
     sq.transitions.sort(key=lambda t: t.line)
@@ -178,6 +183,10 @@ def parse_file(path: str) -> tuple[SequenceFile, list[str]]:
     known = {f.var for f in sq.formulas}
     sq.transitions = [t for t in sq.transitions
                       if not _warn_unknown(sq, t, known)]
+    if any(t.kind == "repl" for t in sq.transitions):
+        sq.warnings.append(
+            "Hay pares con ReplacementTransform: se importan como migrables; "
+            "mapea y exporta TransformByGlyphMap.")
     return sq, lines
 
 
