@@ -12,7 +12,7 @@ On Error Resume Next
 Set wmi = GetObject("winmgmts:\\.\root\cimv2")
 Set procs = wmi.ExecQuery("SELECT * FROM Win32_Process WHERE Name='python.exe' OR Name='pythonw.exe'")
 For Each p In procs
-  If InStr(p.CommandLine, "mf-glyph-mapper") > 0 And InStr(p.CommandLine, "server.py") > 0 Then p.Terminate()
+  If (InStr(p.CommandLine, "web\server.py") > 0 Or InStr(p.CommandLine, "web/server.py") > 0) Then p.Terminate()
 Next
 On Error GoTo 0
 ' Servidor oculto (pythonw = sin consola)
