@@ -751,6 +751,10 @@ $("f-go").onclick = async () => {
   // Precarga del .py (TransformByGlyphMap + GLYPH_MAP_* literales, con path_arc). Manda el trabajo guardado si lo hay.
   const pre = r.prefill || {};
   Object.entries(pre).forEach(([tid, gm]) => { S.maps[tid] = (gm || []).map(normExport).filter(Boolean); });
+  // Origen de cada mapa: precarga del .py vs guardado anterior vs tocado esta sesion.
+  // (Sin esto, un par precargado se rotula "restaurado" y Cancelar parece no hacer nada.)
+  S.preTids = new Set(Object.keys(pre).filter(k => (S.maps[k] || []).length));
+  S.restoredTids = new Set(); S.touchedTids = new Set();
   const nPre = Object.keys(pre).length;
   // Importar empieza LIMPIO salvo precarga. Si hay trabajo anterior, se ofrece recuperarlo (no en silencio).
   let hadPrev = false, nPrev = 0;
@@ -785,6 +789,7 @@ $("b-wipemaps").onclick = () => {
   if (!n && !S.conns.length) return toast(T("no_maps"), 2500);
   if (!confirm(S.lang === "es" ? `¿Descartar los ${n} mapa(s) guardados + conexiones actuales? Se pierde el trabajo de este archivo.` : `Discard the ${n} saved map(s) + current connections? This file's work will be lost.`)) return;
   S.maps = {}; S.done = {}; S.conns = []; S.undo = []; S.redo = [];
+  S.restoredTids = new Set(); S.touchedTids = new Set(); // Limpiar = cero: ni precarga ni restaurado mandan
   try { localStorage.removeItem("mf-maps::" + S.file); } catch (e) {}
   renderTList($("t-filter").value.toLowerCase()); buildPairSel($("pair-filter").value.toLowerCase());
   redraw(); stepper(); status(T("wiped_st"));
@@ -918,6 +923,17 @@ $("dock-toggle").onclick = () => $("dock").classList.toggle("closed");
 /* Paso 2 */
 $("pair-sel").onchange = e => loadPair(+e.target.value);
 $("m-render").onclick = () => loadPair(S.pairIdx < 0 ? 0 : S.pairIdx);
+/* Origen del mapa para m-info: distingue precarga del .py (tu carry),
+   restaurado de sesion anterior, tocado en esta sesion y limpio. */
+function pairSrcTag(tid) {
+  const es = S.lang === "es";
+  const n = (((S.maps || {})[tid]) || []).length;
+  if (!n) return es ? " · par limpio, a mapear" : " · clean pair, map it";
+  if (S.touchedTids && S.touchedTids.has(tid)) return es ? " · mapa en curso" : " · map in progress";
+  if (S.restoredTids && S.restoredTids.has(tid)) return es ? " · mapa restaurado" : " · map restored";
+  if (S.preTids && S.preTids.has(tid)) return es ? " · precarga del .py" : " · .py preload";
+  return es ? " · mapa restaurado" : " · map restored";
+}
 async function loadPair(i) {
   if (i < 0 || i >= S.transitions.length) return;
   // No perder trabajo: vuelca el par actual antes de cambiar (autosave ya lo hace en cada mutación).
@@ -952,7 +968,7 @@ async function loadPair(i) {
   S.conns = saved ? saved.map(connFromSaved) : [];
   computeDone(tid); computeSugg();
   $("m-info").textContent = `✓ ${a.resolved_len} vs ${b.resolved_len} ${T("glyphs_u")}` +
-    (a.warnings.concat(b.warnings).length ? (S.lang === "es" ? " · AVISO ruta" : " · PATH warning") : "") + (saved ? (S.lang === "es" ? " · mapa restaurado" : " · map restored") : (S.lang === "es" ? " · par limpio, a mapear" : " · clean pair, map it"));
+    (a.warnings.concat(b.warnings).length ? (S.lang === "es" ? " · AVISO ruta" : " · PATH warning") : "") + pairSrcTag(tid);
   status(`${S.lang === "es" ? "Par" : "Pair"} ${tid} ${T("pair_ready")}: ${a.resolved_len} vs ${b.resolved_len} ${T("glyphs_u")}.`);
   if ((S.sugg || []).length) toast(S.lang === "es" ? `<b>${S.sugg.length}</b> sugerencia${S.sugg.length > 1 ? "s únicas" : " única"} por forma — revísalas en gris y acepta.` : `<b>${S.sugg.length}</b> unique-shape suggestion${S.sugg.length > 1 ? "s" : ""} — review the grey ones and accept.`, 5000);
   refreshMarks();
@@ -1133,8 +1149,8 @@ function restoreMaps() {
     if (o && typeof o === "object") {
       // Lo guardado manda sobre la precarga del .py (trabajo más nuevo).
       // normMaps sanea formas viejas/rotas (objetos {f,t} o ([],[]) fantasma).
-      if (o.v === 1 && o.maps) { S.maps = {...S.maps, ...normMaps(o.maps)}; S.done = {...S.done, ...(o.done || {})}; }
-      else { S.maps = {...S.maps, ...normMaps(o)}; } // legado: sin ✓ hasta revisitar cada par
+      if (o.v === 1 && o.maps) { const rm = normMaps(o.maps); S.maps = {...S.maps, ...rm}; S.done = {...S.done, ...(o.done || {})}; S.restoredTids = new Set(Object.keys(rm)); }
+      else { const rm = normMaps(o); S.maps = {...S.maps, ...rm}; S.restoredTids = new Set(Object.keys(rm)); } // legado: sin ✓ hasta revisitar cada par
     }
   } catch (e) {}
 }
@@ -1193,13 +1209,18 @@ function autoSave() {  if (S.pairIdx < 0) return;
   const t = S.transitions[S.pairIdx]; if (!t) return;
   // D31: sin conexiones no hay borrador. Vacío = retirar mapa y ✓ (si no, el ◐/✓ fantasma sobreviviría).
   const tid = `${t.from_var}->${t.to_var}`;
+  const sameMaps = (a, b) => JSON.stringify(a || null) === JSON.stringify(b || null);
   if (!S.conns.length) {
+    if ((tid in S.maps) && S.touchedTids) S.touchedTids.add(tid); // quitar también es tocar
     delete S.maps[tid]; delete S.done[tid];
     try { persistMaps(); } catch (e) {}
     refreshMarks();
     return;
   }
-  S.maps[tid] = S.conns.map(connExport);
+  const next = S.conns.map(connExport);
+  // Solo marca tocado si cambió de verdad: navegar sin editar conserva "precarga"/"restaurado".
+  if (!sameMaps(next, S.maps[tid]) && S.touchedTids) S.touchedTids.add(tid);
+  S.maps[tid] = next;
   computeDone(tid);
   try { persistMaps(); } catch (e) {}
   refreshMarks();
