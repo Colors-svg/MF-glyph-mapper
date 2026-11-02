@@ -222,6 +222,29 @@ function connFromSaved(e) {
   if (arc !== null) c.arc = arc;
   return c;
 }
+/* S.maps guarda SIEMPRE formato export ([f,t] o [f,t,{path_arc}]).
+   normExport normaliza cualquier forma (incluidos objetos {f,t,arc} de
+   una sesion con bug + entradas ([],[]) que se descartan). */
+function normExport(e) {
+  let f = [], t = [], arc = null;
+  if (Array.isArray(e)) {
+    f = [...(e[0] || [])]; t = [...(e[1] || [])];
+    if (e.length > 2 && e[2] && typeof e[2].path_arc === "number" && isFinite(e[2].path_arc)) arc = e[2].path_arc;
+  } else if (e && typeof e === "object") {
+    f = [...(e.f || [])]; t = [...(e.t || [])];
+    if (typeof e.arc === "number" && isFinite(e.arc)) arc = e.arc;
+  }
+  if (!f.length && !t.length) return null; // ([],[]) nunca es un mapa valido
+  return arc === null ? [f, t] : [f, t, {path_arc: arc}];
+}
+function normMaps(maps) {
+  const out = {};
+  for (const [k, v] of Object.entries(maps || {})) {
+    const clean = (Array.isArray(v) ? v : []).map(normExport).filter(Boolean);
+    if (clean.length) out[k] = clean;
+  }
+  return out;
+}
 /* Arcos optimizados: el MENOR |θ| cuya trayectoria limpia las cajas de glifos.
    Geometria pura en coords de canvas (y-down; arriba = -y).
    Convencion auditada en manim/utils/paths.py::path_along_arc instalado:
@@ -727,7 +750,7 @@ $("f-go").onclick = async () => {
   S.file = path; S.formulas = r.formulas; S.transitions = r.transitions; S.warnings = r.warnings; S.maps = {}; S.done = {}; S.pre = {}; S._preSeq = (S._preSeq || 0) + 1;
   // Precarga del .py (TransformByGlyphMap + GLYPH_MAP_* literales, con path_arc). Manda el trabajo guardado si lo hay.
   const pre = r.prefill || {};
-  Object.entries(pre).forEach(([tid, gm]) => { S.maps[tid] = gm.map(connFromSaved); });
+  Object.entries(pre).forEach(([tid, gm]) => { S.maps[tid] = (gm || []).map(normExport).filter(Boolean); });
   const nPre = Object.keys(pre).length;
   // Importar empieza LIMPIO salvo precarga. Si hay trabajo anterior, se ofrece recuperarlo (no en silencio).
   let hadPrev = false, nPrev = 0;
@@ -843,7 +866,7 @@ function computeDone(tid) {
   // Solo fiable con conteos reales (par cargado). Sin ellos: sin ✓, como mucho ◐.
   const saved = S.maps[tid];
   if (saved && saved.length && S.gA && S.gB) {
-    const cov = pairCoverage(saved.map(([f, t]) => ({f, t})), S.gA.resolved_len, S.gB.resolved_len);
+    const cov = pairCoverage(saved, S.gA.resolved_len, S.gB.resolved_len);
     if (cov.ok) S.done[tid] = true; else delete S.done[tid];
     return cov;
   }
@@ -960,7 +983,7 @@ async function preloadRest() {
           const tid2 = `${t2.from_var}->${t2.to_var}`;
           const saved = S.maps[tid2];
           if (saved && saved.length) {
-            const cov = pairCoverage(saved.map(([f, tt]) => ({f, t: tt})), a.resolved_len, b.resolved_len);
+            const cov = pairCoverage(saved, a.resolved_len, b.resolved_len);
             if (cov.ok) S.done[tid2] = true; else delete S.done[tid2];
             try { persistMaps(); } catch (e) {}
             refreshMarks();
@@ -1114,8 +1137,9 @@ function restoreMaps() {
     const o = JSON.parse(raw);
     if (o && typeof o === "object") {
       // Lo guardado manda sobre la precarga del .py (trabajo más nuevo).
-      if (o.v === 1 && o.maps) { S.maps = {...S.maps, ...o.maps}; S.done = {...S.done, ...(o.done || {})}; }
-      else { S.maps = {...S.maps, ...o}; } // legado: sin ✓ hasta revisitar cada par
+      // normMaps sanea formas viejas/rotas (objetos {f,t} o ([],[]) fantasma).
+      if (o.v === 1 && o.maps) { S.maps = {...S.maps, ...normMaps(o.maps)}; S.done = {...S.done, ...(o.done || {})}; }
+      else { S.maps = {...S.maps, ...normMaps(o)}; } // legado: sin ✓ hasta revisitar cada par
     }
   } catch (e) {}
 }
