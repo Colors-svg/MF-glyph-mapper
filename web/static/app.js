@@ -596,11 +596,15 @@ function inspectConn(i) {
   const c = S.conns[i]; if (!c) return;
   const a = connArc(c);
   const units = a === null ? "" : String(Math.round(a / Math.PI * 100) / 100);
-  $("inspector").innerHTML = `<b style="color:${connColor(i)}">● ${T("insp_conn")} ${i} — ${connKind(c)}</b><br><code>[${c.f}] → [${c.t}]</code><br>` +
-    `<label class="hint">${T("arc_label")} <input id="arc-in" type="text" inputmode="decimal" value="${units}" placeholder="0.5" style="width:64px" title="${T("arc_title")}"> π</label> ` +
-    `<button id="arc-set" title="${T("arc_title")}">${T("arc_set")}</button> ` +
-    `<button id="arc-auto" title="${T("arc_auto_title")}">${T("arc_auto")}</button> ` +
-    `<button id="arc-clear" title="${T("arc_clear_title")}">×</button><br><span class="hint">${T("insp_del_hint")}</span>`;
+  $("inspector").innerHTML =
+    `<div class="insp-head"><b style="color:${connColor(i)}">● ${T("insp_conn")} ${i} — ${connKind(c)}</b></div>` +
+    `<code class="insp-map">[${c.f}] → [${c.t}]</code>` +
+    `<div class="arc-card"><label class="arc-label" for="arc-in">${T("arc_label")} <span class="arc-unit">π</span></label>` +
+    `<input id="arc-in" type="text" inputmode="decimal" value="${units}" placeholder="0.5" title="${T("arc_title")}" autocomplete="off" spellcheck="false">` +
+    `<div class="arc-btns"><button id="arc-set" class="primary">${T("arc_set")}</button>` +
+    `<button id="arc-auto" class="ghost">${T("arc_auto")}</button>` +
+    `<button id="arc-clear" class="ghost danger" title="${T("arc_clear_title")}">×</button></div></div>` +
+    `<span class="hint">${T("insp_del_hint")}</span>`;
   const commit = raw => {
     snap();
     const s = String(raw).trim().replace("π", "").replace("pi", "");
