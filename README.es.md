@@ -50,6 +50,11 @@ listas `GLYPH_MAP_*` literales se precargan, `{"path_arc": …}` por entrada inc
 Atajos: `Ctrl+K` buscar par · `Ctrl+Z/Y` deshacer/rehacer · `Supr` eliminar ·
 `F` encuadrar · doble clic encuadra · `Esc` limpia selección · `?` ayuda/tour.
 
+Historial de aprendizaje: cada **Guardar mapa** añade ese par al local
+`.mf-learn/dataset.jsonl` (ignorado por git, nunca se sube, sin rutas de archivo) —
+datos futuros para un sugeridor entrenado con tus mapas. El botón **Borrar historial**
+junto a Descartar mapas lo vacía.
+
 Mapas: ✓ = cobertura total · ◐ = parcial · · = vacío. Guardado automático
 (sesión + disco), sugerencias grises solo si la forma es única 1:1.
 

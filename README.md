@@ -51,6 +51,10 @@ drag = marquee; per-connection `path_arc` in π units + Auto-arcs) → **3 Verif
 Shortcuts: `Ctrl+K` find pair · `Ctrl+Z/Y` undo/redo · `Del` delete ·
 `F` fit · double-click fits · `Esc` clears selection · `?` help/tour.
 
+Learning history: every **Save map** appends that pair to local `.mf-learn/dataset.jsonl`
+(git-ignored, never uploaded, no file paths) — future training data for a suggester
+learned from your maps. **Clear history** button next to Discard maps wipes it.
+
 Maps: ✓ = full coverage · ◐ = partial · · = empty. Autosave
 (session + disk), grey suggestions only for unique 1:1 shapes.
 

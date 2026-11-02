@@ -1025,6 +1025,7 @@ $("b-savemap").onclick = async () => {
   S.maps[tid] = S.conns.map(connExport);
   const cov = computeDone(tid);
   try { persistMaps(); } catch (e) {}
+  try { learnLog(); } catch (e) {}
   refreshMarks();
   const state = cov && cov.ok ? T("complete_full") :
     (S.lang === "es" ? `parcial ◐ (faltan A:[${cov ? cov.missA.join(",") : "?"}] B:[${cov ? cov.missB.join(",") : "?"}])`
@@ -1051,8 +1052,58 @@ function restoreMaps() {
     }
   } catch (e) {}
 }
-function autoSave() {
-  if (S.pairIdx < 0) return;
+/* Aprendizaje local (sin esfuerzo): cada Guardar/Export añade este par al
+   dataset `.mf-learn/dataset.jsonl` — solo local, nunca se sube a git, sin
+   rutas de archivo. Base futura para un sugeridor entrenado con tus mapas. */
+function glyphFeat(side, idx) {
+  const pay = side === "A" ? S.gA : S.gB;
+  const g = pay && pay.glyphs.find(g => g.index === idx);
+  if (!g) return null;
+  return {type: g.type_name, w: Math.round(g.width * 1000) / 1000,
+          h: Math.round(g.height * 1000) / 1000, sig: shapeSig(g)};
+}
+function learnLog() {
+  try {
+    if (S.pairIdx < 0 || !S.transitions[S.pairIdx] || !S.conns.length) return;
+    if (!S.gA || !S.gB) return;
+    const t = S.transitions[S.pairIdx];
+    const rec = {tid: `${t.from_var}->${t.to_var}`, fase: t.fase || "",
+      latex_a: S.latexA || "", latex_b: S.latexB || "",
+      n_from: S.gA.resolved_len, n_to: S.gB.resolved_len,
+      connections: S.conns.map(c => {
+        const a = connArc(c);
+        const e = {f: [...c.f], t: [...c.t],
+          fa: c.f.map(i => glyphFeat("A", i)).filter(Boolean),
+          fb: c.t.map(i => glyphFeat("B", i)).filter(Boolean)};
+        if (a !== null) e.arc = Math.round(a * 1e6) / 1e6;
+        return e;
+      })};
+    api("/api/learn", {op: "append", records: [rec]}, 15000).catch(() => {});
+  } catch (e) { /* el dataset nunca rompe el mapeo */ }
+}
+(function addLearnClear() {
+  if ($("b-learnclear")) return;
+  const ref = $("b-wipemaps");
+  if (!ref || !ref.parentNode) return;
+  const b = document.createElement("button");
+  b.id = "b-learnclear"; b.className = "ghost";
+  b.textContent = S.lang === "es" ? "Borrar historial" : "Clear history";
+  b.title = S.lang === "es"
+    ? "Borra el historial local de aprendizaje (.mf-learn/dataset.jsonl). Tus mapas no se tocan."
+    : "Clears the local learning history (.mf-learn/dataset.jsonl). Your maps are untouched.";
+  ref.parentNode.insertBefore(b, ref.nextSibling);
+  b.onclick = async () => {
+    let n = 0;
+    try { const s = await api("/api/learn", {op: "stats"}, 15000); n = s.records || 0; } catch (e) {}
+    if (!n) return toast(S.lang === "es" ? "Historial vacío." : "History empty.", 2500);
+    if (!confirm(S.lang === "es"
+      ? `¿Borrar el historial local de aprendizaje (${n} registro(s))? Tus mapas guardados no se tocan.`
+      : `Clear the local learning history (${n} record(s))? Your saved maps are untouched.`)) return;
+    try { await api("/api/learn", {op: "clear"}, 15000); } catch (e) {}
+    toast(S.lang === "es" ? "Historial borrado." : "History cleared.", 2500);
+  };
+})();
+function autoSave() {  if (S.pairIdx < 0) return;
   const t = S.transitions[S.pairIdx]; if (!t) return;
   // D31: sin conexiones no hay borrador. Vacío = retirar mapa y ✓ (si no, el ◐/✓ fantasma sobreviviría).
   const tid = `${t.from_var}->${t.to_var}`;

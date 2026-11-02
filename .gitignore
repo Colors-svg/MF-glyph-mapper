@@ -4,6 +4,7 @@ __pycache__/
 *.pyo
 previews/
 media/
+.mf-learn/
 .tmp_*/
 .tmp_*.py
 .tmp_canvas_fixture.py

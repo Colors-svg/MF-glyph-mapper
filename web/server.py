@@ -19,6 +19,84 @@ from urllib.parse import urlparse, unquote
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 
+LEARN_DIR = ROOT / ".mf-learn"
+LEARN_FILE = LEARN_DIR / "dataset.jsonl"
+
+
+def _clean_learn_record(rec: dict) -> dict | None:
+    """Sanea un registro de aprendizaje: solo claves conocidas, sin rutas ni datos personales.
+
+    Acepta: tid, fase, latex_a/b, n_from/n_to y connections [{f, t, arc, fa, fb}].
+    Todo lo demás (incluida cualquier ruta de archivo) se descarta. topes anti-abuso.
+    """
+    if not isinstance(rec, dict):
+        return None
+    tid = rec.get("tid")
+    if not isinstance(tid, str) or "->" not in tid or len(tid) > 120:
+        return None
+    def _txt(v):
+        return v if isinstance(v, str) and len(v) <= 2000 else ""
+    def _feat(d):
+        if not isinstance(d, dict):
+            return None
+        t = d.get("type")
+        try:
+            w, h = float(d.get("w", 0)), float(d.get("h", 0))
+        except Exception:
+            return None
+        s = d.get("sig")
+        if not isinstance(t, str) or len(t) > 40:
+            return None
+        if not isinstance(s, str) or len(s) > 4000:
+            return None
+        return {"type": t[:40], "w": round(w, 3), "h": round(h, 3), "sig": s[:4000]}
+    conns = []
+    raw = rec.get("connections")
+    if not isinstance(raw, list) or len(raw) > 200:
+        return None
+    for c in raw[:200]:
+        if not isinstance(c, dict):
+            return None
+        if not isinstance(c.get("f", []), (list, tuple)) or \
+           not isinstance(c.get("t", []), (list, tuple)):
+            return None
+        try:
+            f = [int(x) for x in c.get("f", [])]
+            t = [int(x) for x in c.get("t", [])]
+        except Exception:
+            return None
+        if len(f) > 40 or len(t) > 40:
+            return None
+        e = {"f": f, "t": t}
+        arc = c.get("arc", None)
+        if arc is not None:
+            try:
+                a = float(arc)
+            except Exception:
+                return None
+            if abs(a) > 4 * 3.141592653589793:
+                return None
+            e["arc"] = round(a, 6)
+        fa = [_feat(x) for x in (c.get("fa", []) or [])][:40]
+        fb = [_feat(x) for x in (c.get("fb", []) or [])][:40]
+        if any(x is None for x in fa + fb):
+            return None
+        e["fa"], e["fb"] = fa, fb
+        conns.append(e)
+    if not conns:
+        return None
+    try:
+        nf, nt = int(rec.get("n_from", 0)), int(rec.get("n_to", 0))
+    except Exception:
+        return None
+    import time as _time
+    return {"v": 1, "ts": int(_time.time()), "tid": tid[:120],
+            "fase": _txt(rec.get("fase", ""))[:120],
+            "latex_a": _txt(rec.get("latex_a", "")),
+            "latex_b": _txt(rec.get("latex_b", "")),
+            "n_from": max(0, min(nf, 500)), "n_to": max(0, min(nt, 500)),
+            "connections": conns}
+
 from mf_core.seq_extract import parse_file  # noqa: E402
 from mf_core.validator import validate  # noqa: E402
 from mf_core.exporter import (  # noqa: E402
@@ -218,6 +296,39 @@ class Handler(BaseHTTPRequestHandler):
                                       "instructions": build_agent_instructions(bundle)})
                 else:
                     self._send_json({"ok": False, "error": f"mode {mode}?"}, 400)
+            elif self.path == "/api/learn":
+                op = req.get("op", "append")
+                try:
+                    if op == "append":
+                        recs = req.get("records", [])
+                        if not isinstance(recs, list) or len(recs) > 20:
+                            return self._send_json({"ok": False, "error": "records?"}, 400)
+                        LEARN_DIR.mkdir(parents=True, exist_ok=True)
+                        n = 0
+                        with open(LEARN_FILE, "a", encoding="utf-8") as fh:
+                            for r in recs[:20]:
+                                c = _clean_learn_record(r)
+                                if c is None:
+                                    continue
+                                fh.write(json.dumps(c, ensure_ascii=False) + "\n")
+                                n += 1
+                        self._send_json({"ok": True, "saved": n})
+                    elif op == "stats":
+                        n = 0
+                        if LEARN_FILE.is_file():
+                            with open(LEARN_FILE, encoding="utf-8") as fh:
+                                for _ in fh:
+                                    n += 1
+                        self._send_json({"ok": True, "records": n})
+                    elif op == "clear":
+                        if LEARN_FILE.is_file():
+                            LEARN_FILE.unlink()
+                        self._send_json({"ok": True, "records": 0})
+                    else:
+                        self._send_json({"ok": False, "error": "op?"}, 400)
+                except Exception as e:  # noqa: BLE001
+                    self._send_json({"ok": False, "error": f"{type(e).__name__}"}, 500)
+                return
             elif self.path == "/api/preview":
                 pay = _run_worker("preview_worker.py",
                                   {"latex_a": req.get("latex_a", ""), "latex_b": req.get("latex_b", ""),
