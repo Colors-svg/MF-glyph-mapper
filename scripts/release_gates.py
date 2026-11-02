@@ -29,6 +29,11 @@ def main() -> int:
                        capture_output=True, text=True)
     gate("tests/test_ids.py", p.returncode == 0,
          (p.stderr or p.stdout).strip().splitlines()[-1][:200] if (p.stderr or p.stdout) else "")
+    # 2b) arcos: signo y sagita contra el Manim instalado
+    p = subprocess.run([sys.executable, "tests/test_arcs.py"], cwd=ROOT,
+                       capture_output=True, text=True)
+    gate("tests/test_arcs.py", p.returncode == 0,
+         (p.stderr or p.stdout).strip().splitlines()[-1][:200] if (p.stderr or p.stdout) else "")
     # 3) demo parseable
     sys.path.insert(0, str(ROOT / "src"))
     from mf_core.seq_extract import parse_file

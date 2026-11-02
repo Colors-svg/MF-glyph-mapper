@@ -222,26 +222,93 @@ function connFromSaved(e) {
   if (arc !== null) c.arc = arc;
   return c;
 }
-function centroidOf(side, idx) {
-  try {
-    const m = S._map && S._map[side] && S._map[side][idx];
-    return m ? {x: m.x, y: m.y} : null;
-  } catch (e) { return null; }
+/* Arcos optimizados: el MENOR |θ| cuya trayectoria limpia las cajas de glifos.
+   Geometria pura en coords de canvas (y-down; arriba = -y).
+   Convencion auditada en manim/utils/paths.py::path_along_arc instalado:
+   centro = mid + cross(OUT,v/2)/tan(θ/2), rotacion CCW ⇒ θ>0 comba hacia la
+   DERECHA del viaje (horario). Viaje +x ⇒ θ>0 baja (-y Manim).
+   Supuesto documentado: el carry fluye de izquierda a derecha (como la
+   lectura y como el canvas A|B); con viaje +x, comba arriba ⇔ θ<0, o sea
+   s = -sign(dx). Rectas que ya limpian (margen incluido) quedan rectas (0). */
+function mapPt(side, idx) {
+  const m = S._map && S._map[side] && S._map[side][idx];
+  return m ? {x: m.x, y: m.y} : null;
+}
+function meanPt(list) {
+  const ps = list.filter(Boolean);
+  if (!ps.length) return null;
+  let x = 0, y = 0;
+  ps.forEach(p => { x += p.x; y += p.y; });
+  return {x: x / ps.length, y: y / ps.length};
+}
+function pairBoxes() {
+  if (S._boxFile === S.file && S._boxIdx === S.pairIdx && S._boxes) return S._boxes;
+  const box = {A: [], B: []};
+  const s = S._layoutS || 120;
+  [["A", S.gA], ["B", S.gB]].forEach(([side, pay]) => {
+    (pay ? pay.glyphs : []).forEach(g => {
+      const m = S._map && S._map[side] && S._map[side][g.index];
+      if (!m) return;
+      const hw = g.width * s / 2, hh = g.height * s / 2;
+      box[side].push({i: g.index, x0: m.x - hw, y0: m.y - hh,
+                       x1: m.x + hw, y1: m.y + hh, h: g.height * s});
+    });
+  });
+  S._boxes = box; S._boxIdx = S.pairIdx; S._boxFile = S.file;
+  return box;
+}
+function ptBoxDist(px, py, r) {
+  const dx = px < r.x0 ? r.x0 - px : (px > r.x1 ? px - r.x1 : 0);
+  const dy = py < r.y0 ? r.y0 - py : (py > r.y1 ? py - r.y1 : 0);
+  return Math.hypot(dx, dy);
+}
+// Punto del arco circular cuerda+θ (misma geometria que Manim; en canvas el
+// signo se interpreta espejado por el flip vertical — ver nota de arriba).
+function arcXY(fx, fy, tx, ty, arc, a) {
+  if (Math.abs(arc) < 1e-9) return {x: fx + (tx - fx) * a, y: fy + (ty - fy) * a};
+  const mx = (fx + tx) / 2, my = (fy + ty) / 2;
+  const dx = tx - fx, dy = ty - fy;
+  const t = Math.tan(arc / 2);
+  const cx = mx + (-dy / 2) / t, cy = my + (dx / 2) / t;
+  const b = a * arc, cb = Math.cos(b), sb = Math.sin(b);
+  const sx = fx - cx, sy = fy - cy;
+  return {x: cx + sx * cb - sy * sb, y: cy + sx * sb + sy * cb};
+}
+function arcClearsCanvas(fx, fy, tx, ty, arc, boxes, margin) {
+  for (let k = 0; k <= 24; k++) {
+    const p = arcXY(fx, fy, tx, ty, arc, k / 24);
+    for (const r of boxes) {
+      if (ptBoxDist(p.x, p.y, r) < margin) return false;
+    }
+  }
+  return true;
 }
 function autoArcFor(c) {
-  if (!c.f.length || !c.t.length) return 0;
-  const ps = c.f.map(i => centroidOf("A", i)).filter(Boolean);
-  const qs = c.t.map(i => centroidOf("B", i)).filter(Boolean);
-  if (!ps.length || !qs.length) return Math.PI / 3;
-  const cxA = ps.reduce((s, p) => s + p.x, 0) / ps.length;
-  const cxB = qs.reduce((s, p) => s + p.x, 0) / qs.length;
-  const cyA = ps.reduce((s, p) => s + p.y, 0) / ps.length;
-  const cyB = qs.reduce((s, p) => s + p.y, 0) / qs.length;
-  const dx = cxB - cxA, dy = cyB - cyA;
+  if (!c.f.length || !c.t.length || !S.gA || !S.gB || !S._map) return 0;
+  const PA = meanPt(c.f.map(i => mapPt("A", i)));
+  const PB = meanPt(c.t.map(i => mapPt("B", i)));
+  if (!PA || !PB) return 0;
+  const dx = PB.x - PA.x, dy = PB.y - PA.y;
   if (Math.hypot(dx, dy) < 1e-6) return 0;
-  const vert = Math.abs(dy) > Math.abs(dx) * 2;
-  const mag = vert ? Math.PI / 2 : Math.PI / 3;
-  return (dx >= 0 ? 1 : -1) * mag;
+  const boxes = pairBoxes();
+  const skip = new Set([...c.f.map(i => "A" + i), ...c.t.map(i => "B" + i)]);
+  const obs = [...boxes.A.filter(o => !skip.has("A" + o.i)),
+               ...boxes.B.filter(o => !skip.has("B" + o.i))];
+  const hs = [...boxes.A.filter(o => c.f.includes(o.i)),
+              ...boxes.B.filter(o => c.t.includes(o.i))].map(o => o.h).filter(h => h > 0);
+  const H = hs.length ? hs.reduce((a, b) => a + b, 0) / hs.length : 60;
+  const margin = 0.12 * H;
+  // Lado "arriba del canvas" primero; el loop ascendente garantiza arco minimo.
+  const sUp = dx !== 0 ? -Math.sign(dx) : 1;
+  const order = [sUp, -sUp];
+  const levels = [0];
+  for (let th = 0.12; th <= Math.PI * 0.98; th += 0.12) levels.push(th);
+  for (const th of levels) {
+    for (const s of order) {
+      if (arcClearsCanvas(PA.x, PA.y, PB.x, PB.y, s * th, obs, margin)) return s * th;
+    }
+  }
+  return sUp * Math.PI / 2; // nada limpia: elevacion clasica hacia arriba
 }
 function glyphConns(side, idx) {
   const out = [];

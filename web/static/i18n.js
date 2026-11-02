@@ -127,7 +127,7 @@ es: {
   arc_clear_title: "Quitar curva",
   arc_bad: "Arco inválido: usa número en unidades de π (-4…4).",
   autoarc_btn: "Auto-arcos",
-  autoarc_title: "Propone path_arc por dirección a todas (luego editable por conexión)",
+  autoarc_title: "Calcula path_arc por geometría: cuerda entre centroides, arco mínimo que limpia, rectas que limpian quedan rectas",
   repl_tag: "↯ Replacement · migrable",
 },
 en: {
@@ -257,7 +257,7 @@ en: {
   arc_clear_title: "Remove curve",
   arc_bad: "Invalid arc: use a number in π units (-4…4).",
   autoarc_btn: "Auto-arcs",
-  autoarc_title: "Propose path_arc by direction to all (then editable per connection)",
+  autoarc_title: "Compute path_arc by geometry: centroid chord, minimal clearing arc, clean straights stay straight",
   repl_tag: "↯ Replacement · migratable",
 }
 };
