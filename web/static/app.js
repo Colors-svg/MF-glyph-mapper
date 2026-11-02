@@ -970,8 +970,24 @@ $("b-curves").onclick = () => {
   $("stage").classList.toggle("hide-conn", S.hideConn);
   $("b-curves").textContent = S.hideConn ? T("curves_off") : T("curves_on");
 };
-$("b-fout").onclick = () => { if (!S.selA.size) return toast(S.lang === "es" ? "Selecciona origen." : "Select a source.", 2500, true); addConn([...S.selA], []); };
-$("b-fin").onclick = () => { if (!S.selB.size) return toast(S.lang === "es" ? "Selecciona destino." : "Select a target.", 2500, true); addConn([], [...S.selB]); };
+$("b-fout").onclick = () => {
+  // A prueba de equivocado: si su lado está vacío pero el otro tiene
+  // selección, se enruta al otro (fade-in con B). Con ambos lados, no adivina.
+  if (S.selA.size && S.selB.size) return toast(S.lang === "es"
+    ? "Tienes A y B seleccionados: usa Conectar N→M o limpia un lado."
+    : "Both A and B selected: use Connect N→M or clear one side.", 3000, true);
+  if (S.selA.size) return addConn([...S.selA], []);
+  if (S.selB.size) return addConn([], [...S.selB]);
+  return toast(S.lang === "es" ? "Selecciona origen." : "Select a source.", 2500, true);
+};
+$("b-fin").onclick = () => {
+  if (S.selA.size && S.selB.size) return toast(S.lang === "es"
+    ? "Tienes A y B seleccionados: usa Conectar N→M o limpia un lado."
+    : "Both A and B selected: use Connect N→M or clear one side.", 3000, true);
+  if (S.selB.size) return addConn([], [...S.selB]);
+  if (S.selA.size) return addConn([...S.selA], []);
+  return toast(S.lang === "es" ? "Selecciona destino." : "Select a target.", 2500, true);
+};
 $("b-del").onclick = () => {
   if (S._delIdx === undefined || S._delIdx < 0 || S._delIdx >= S.conns.length) return toast(S.lang === "es" ? "Marca una conexión en el panel." : "Mark a connection in the panel.", 2500, true);
   snap(); S.conns.splice(S._delIdx, 1); S._delIdx = undefined; redraw(); autoSave();
