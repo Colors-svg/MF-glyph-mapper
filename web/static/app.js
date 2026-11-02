@@ -32,7 +32,7 @@ function applyLang() {
   if ($("f-path") && !$("f-path").value) $("f-path").placeholder = T("fpath_ph");
   if ($("b-quick")) $("b-quick").textContent = S.quick ? T("quick_on") : T("quick_off");
   if ($("b-curves")) $("b-curves").textContent = S.hideConn ? T("curves_off") : T("curves_on");
-  if ($("b-autoarc") && !S._arcFlash) $("b-autoarc").textContent = T("autoarc_btn");
+  if ($("b-autoarc")) $("b-autoarc").textContent = T("autoarc_btn");
   updateSuggBtn(); stepper(); refreshMarks(); redraw();
 }
 try { S.lang = localStorage.getItem("mf-lang") || "es"; } catch (e) { S.lang = "es"; }
@@ -1033,13 +1033,8 @@ $("b-conn").onclick = () => addConn([...S.selA], [...S.selB]);
     });
     redraw(); autoSave();
     if (S._delIdx !== undefined) inspectConn(S._delIdx);
-    // Feedback momentáneo: la acción es puntual, no un modo. Flash + texto con cuenta.
-    S._arcFlash = true;
-    b.classList.remove("ghost"); b.classList.add("primary");
-    b.textContent = changed
-      ? (S.lang === "es" ? `Auto-arcos ✓ (${changed})` : `Auto-arcs ✓ (${changed})`)
-      : (S.lang === "es" ? "Auto-arcos ✓ (sin cambios)" : "Auto-arcs ✓ (no changes)");
-    setTimeout(() => { S._arcFlash = false; b.classList.remove("primary"); b.classList.add("ghost"); b.textContent = T("autoarc_btn"); }, 1200);
+    // Accion puntual (como Conectar): el boton queda fijo en gris; el
+    // resultado se ve en la lista ([f]->[t] ⤴x.xxπ) y en el toast.
     toast(changed
       ? (S.lang === "es" ? `Auto-arcos aplicados a <b>${changed}</b> (editables por conexión).` : `Auto-arcs applied to <b>${changed}</b> (editable per connection).`)
       : (S.lang === "es" ? "Los arcos ya estaban como los propone el auto." : "Arcs already match the auto proposal."), 2500);
